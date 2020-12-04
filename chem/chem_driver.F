@@ -1790,6 +1790,39 @@ end if !Chemistry time step check
 
    END DO chem_tile_loop_1
 
+!-- 20201203 rkumar_start (save AOD and Angstrom Exponent output)
+
+  if (config_flags%chem_opt == GOCART_SIMPLE) then
+    do j = jts, jte
+       do i = its, ite
+!- first initialize everything to zero
+         grid%aod_300(i, j) = 0.0
+         grid%aod_400(i, j) = 0.0
+         grid%aod_500(i, j) = 0.0
+         grid%aod_550(i, j) = 0.0
+         grid%aod_600(i, j) = 0.0
+         grid%aod_999(i, j) = 0.0
+         grid%ang_exp(i, j) = 0.0
+
+!- calculate total column AOD and column mean SSA
+         do k = kts, kte
+            grid%aod_300(i,j) = grid%aod_300(i,j) + grid%tauaer1(i,k,j)
+            grid%aod_400(i,j) = grid%aod_400(i,j) + grid%tauaer2(i,k,j)
+            grid%aod_600(i,j) = grid%aod_600(i,j) + grid%tauaer3(i,k,j)
+            grid%aod_999(i,j) = grid%aod_999(i,j) + grid%tauaer4(i,k,j)
+            grid%aod_550(i,j) = grid%aod_550(i,j) + grid%ext_coef(i,k,j,p_extcof55)*dz8w(i,k,j) * 0.001 ! 1/km = 0.001/m
+         enddo
+            grid%ang_exp(i,j) = grid%ang_exp(i,j) + alog(grid%aod_400(i,j)/grid%aod_600(i,j))/alog(600./400.)
+            grid%aod_500(i,j) = grid%aod_500(i,j) + grid%aod_400(i,j)*(0.4/0.5)**grid%ang_exp(i,j)
+
+       enddo   !i
+    enddo      !j
+  endif
+
+
+!-- 20201203 rkumar_end
+
+
 !-- Work around for dgnum and dgnumwet not being written to restart files.
    
    grid%dgnum_a1(its:ite, kts:kte, jts:jte) = grid%dgnum4d(its:ite, kts:kte, jts:jte, 1)

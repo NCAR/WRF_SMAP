@@ -602,7 +602,8 @@ print *,'WATER CHANGE = ',change_water
                                 its , ite , jts , jte , kts , kte , &
                                 sf_surface_physics , num_soil_layers , real_data_init_type , &
                                 num_st_levels_input , num_sm_levels_input , num_sw_levels_input , &
-                                num_st_levels_alloc , num_sm_levels_alloc , num_sw_levels_alloc )
+                                num_st_levels_alloc , num_sm_levels_alloc , num_sw_levels_alloc, &
+                                thin_soil_layers )
 
       IMPLICIT NONE
 
@@ -629,6 +630,7 @@ print *,'WATER CHANGE = ',change_water
       REAL , DIMENSION(ims:ime,num_soil_layers,jms:jme) , INTENT(OUT) :: tslb , smois , sh2o
       REAL , DIMENSION(ims:ime,jms:jme) , INTENT(IN) :: tavgsfc, ht, toposoil
       REAL , DIMENSION(ims:ime,jms:jme) , INTENT(INOUT) :: tsk, tmn
+      logical, intent (in) :: thin_soil_layers
 
       INTEGER :: i , j , k, l , dominant_index , num_soil_cat , num_veg_cat, closest_layer
       REAL :: dominant_value, closest_depth, diff_cm
@@ -789,7 +791,7 @@ print *,'WATER CHANGE = ',change_water
                                  its , ite , jts , jte , kts , kte )
 
       ELSE IF ( ( sf_surface_physics .EQ. LSMSCHEME ) .AND. ( num_soil_layers .GT. 1 ) ) THEN
-         CALL init_soil_depth_2 ( zs , dzs , num_soil_layers )
+         CALL init_soil_depth_2 ( zs , dzs , num_soil_layers, thin_soil_layers )
          CALL init_soil_2_real ( tsk , tmn , smois , sh2o , tslb , &
                                  st_input , sm_input , sw_input , landmask , sst , &
                                  zs , dzs , &
@@ -801,7 +803,7 @@ print *,'WATER CHANGE = ',change_water
                                  ims , ime , jms , jme , kms , kme , &
                                  its , ite , jts , jte , kts , kte )
       ELSE IF ( ( sf_surface_physics .EQ. NOAHMPSCHEME ) .AND. ( num_soil_layers .GT. 1 ) ) THEN
-         CALL init_soil_depth_2 ( zs , dzs , num_soil_layers )
+         CALL init_soil_depth_2 ( zs , dzs , num_soil_layers, thin_soil_layers )
          CALL init_soil_2_real ( tsk , tmn , smois , sh2o , tslb , &
                                  st_input , sm_input , sw_input , landmask , sst , &
                                  zs , dzs , &
@@ -870,6 +872,7 @@ print *,'WATER CHANGE = ',change_water
                                    tsk,tmn,zs,dzs,           &
                                    num_soil_layers,          &
                                    sf_surface_physics ,      &
+                                   thin_soil_layers ,      &
                                    ids,ide, jds,jde, kds,kde,&
                                    ims,ime, jms,jme, kms,kme,&
                                    its,ite, jts,jte, kts,kte )
@@ -881,6 +884,7 @@ print *,'WATER CHANGE = ',change_water
                             its,ite, jts,jte, kts,kte
 
       INTEGER, INTENT(IN) :: num_soil_layers , sf_surface_physics
+      logical, intent (in) :: thin_soil_layers
 
       REAL, DIMENSION( ims:ime, num_soil_layers, jms:jme ) , INTENT(INOUT) :: smois, tslb
 
@@ -905,7 +909,7 @@ print *,'WATER CHANGE = ',change_water
                                 ims,ime, jms,jme, kms,kme,               &
                                 its,ite, jts,jte, kts,kte                )
       ELSE IF ( ( sf_surface_physics .EQ. LSMSCHEME ) .AND. ( num_soil_layers .GT. 1 ) ) THEN
-         CALL init_soil_depth_2 ( zs , dzs , num_soil_layers )
+         CALL init_soil_depth_2 ( zs , dzs , num_soil_layers, thin_soil_layers )
          CALL init_soil_2_ideal ( xland,xice,vegfra,snow,canwat,         &
                                   ivgtyp,isltyp,tslb,smois,tmn,          &
                                   num_soil_layers,                       &
@@ -913,7 +917,7 @@ print *,'WATER CHANGE = ',change_water
                                   ims,ime, jms,jme, kms,kme,             &
                                   its,ite, jts,jte, kts,kte              )
       ELSE IF ( ( sf_surface_physics .EQ. NOAHMPSCHEME ) .AND. ( num_soil_layers .GT. 1 ) ) THEN
-         CALL init_soil_depth_2 ( zs , dzs , num_soil_layers )
+         CALL init_soil_depth_2 ( zs , dzs , num_soil_layers, thin_soil_layers )
          CALL init_soil_2_ideal ( xland,xice,vegfra,snow,canwat,         &
                                   ivgtyp,isltyp,tslb,smois,tmn,          &
                                   num_soil_layers,                       &
@@ -1122,17 +1126,21 @@ cycle
 
    END SUBROUTINE init_soil_depth_1
 
-   SUBROUTINE init_soil_depth_2 ( zs , dzs , num_soil_layers )
+   SUBROUTINE init_soil_depth_2 ( zs , dzs , num_soil_layers, thin_soil_layers )
 
       IMPLICIT NONE
 
       INTEGER, INTENT(IN) :: num_soil_layers
-
+      logical, intent (in) :: thin_soil_layers
       REAL, DIMENSION(1:num_soil_layers), INTENT(OUT)  ::  zs,dzs
 
+      REAL, DIMENSION(1:num_soil_layers) :: dzs2
       INTEGER                   ::      l
 
       dzs = (/ 0.1 , 0.3 , 0.6 , 1.0 /)
+      dzs2 = (/ 0.05 , 0.1 , 0.25 , 0.6 /)
+
+      if (thin_soil_layers) dzs = dzs2
 
       IF ( num_soil_layers .NE. 4 ) THEN
          PRINT '(A)','The Noah and NoahMP LSMs use 4 layers.  Set num_soil_layers=4 in the namelist (&physics).'
@@ -3583,7 +3591,8 @@ endif
                                 its , ite , jts , jte , kts , kte , &
                                 sf_surface_physics , num_soil_layers , real_data_init_type , &
                                 num_st_levels_input , num_sm_levels_input , num_sw_levels_input , &
-                                num_st_levels_alloc , num_sm_levels_alloc , num_sw_levels_alloc )
+                                num_st_levels_alloc , num_sm_levels_alloc , num_sw_levels_alloc, &
+                                thin_soil_layers )
 
       IMPLICIT NONE
 
@@ -3609,6 +3618,7 @@ endif
       REAL , DIMENSION(ims:ime,num_soil_layers,jms:jme) , INTENT(OUT) :: tslb , smois , sh2o
       REAL , DIMENSION(ims:ime,jms:jme) , INTENT(IN) :: tmn
       REAL , DIMENSION(ims:ime,jms:jme) , INTENT(INOUT) :: tsk
+      logical, intent (in) :: thin_soil_layers
 
       INTEGER :: i , j , l , dominant_index , num_soil_cat , num_veg_cat
       REAL :: dominant_value
@@ -3625,7 +3635,7 @@ endif
 
       ELSE IF ( ( sf_surface_physics .EQ. LSMSCHEME .or. sf_surface_physics .eq. 88 ) .AND. &
                 ( num_soil_layers .GT. 1 ) ) THEN
-         CALL init_soil_depth_2 ( zs , dzs , num_soil_layers )
+         CALL init_soil_depth_2 ( zs , dzs , num_soil_layers, thin_soil_layers )
          CALL init_soil_2_real ( tsk , tmn , smois , sh2o , tslb , &
                                  st_input , sm_input , sw_input , landmask , sst , &
                                  zs , dzs , &
@@ -3648,7 +3658,7 @@ endif
 !                             its , ite , jts , jte , kts , kte )
       ELSE IF ( ( sf_surface_physics .EQ. NOAHMPSCHEME .or. sf_surface_physics .eq. 88 ) .AND. &
                 ( num_soil_layers .GT. 1 ) ) THEN
-         CALL init_soil_depth_2 ( zs , dzs , num_soil_layers )
+         CALL init_soil_depth_2 ( zs , dzs , num_soil_layers, thin_soil_layers )
          CALL init_soil_2_real ( tsk , tmn , smois , sh2o , tslb , &
                                  st_input , sm_input , sw_input , landmask , sst , &
                                  zs , dzs , &
@@ -3705,6 +3715,7 @@ endif
                                    tsk,tmn,zs,dzs,           &
                                    num_soil_layers,          &
                                    sf_surface_physics ,      &
+                                   thin_soil_layers,        &
                                    ids,ide, jds,jde, kds,kde,&
                                    ims,ime, jms,jme, kms,kme,&
                                    its,ite, jts,jte, kts,kte )
@@ -3716,6 +3727,7 @@ endif
                             its,ite, jts,jte, kts,kte
 
       INTEGER, INTENT(IN) :: num_soil_layers , sf_surface_physics
+      logical, intent (in) :: thin_soil_layers
 
       REAL, DIMENSION( ims:ime, num_soil_layers, jms:jme ) , INTENT(INOUT) :: smois, tslb
 
@@ -3740,7 +3752,7 @@ endif
                                 ims,ime, jms,jme, kms,kme,               &
                                 its,ite, jts,jte, kts,kte                )
       ELSE IF ( ( sf_surface_physics .EQ. LSMSCHEME ) .AND. ( num_soil_layers .GT. 1 ) ) THEN
-         CALL init_soil_depth_2 ( zs , dzs , num_soil_layers )
+         CALL init_soil_depth_2 ( zs , dzs , num_soil_layers, thin_soil_layers )
          CALL init_soil_2_ideal ( xland,xice,vegfra,snow,canwat,         &
                                   ivgtyp,isltyp,tslb,smois,tmn,          &
                                   num_soil_layers,                       &
@@ -3748,7 +3760,7 @@ endif
                                   ims,ime, jms,jme, kms,kme,             &
                                   its,ite, jts,jte, kts,kte              )
       ELSE IF ( ( sf_surface_physics .EQ. NOAHMPSCHEME ) .AND. ( num_soil_layers .GT. 1 ) ) THEN
-         CALL init_soil_depth_2 ( zs , dzs , num_soil_layers )
+         CALL init_soil_depth_2 ( zs , dzs , num_soil_layers, thin_soil_layers )
          CALL init_soil_2_ideal ( xland,xice,vegfra,snow,canwat,         &
                                   ivgtyp,isltyp,tslb,smois,tmn,          &
                                   num_soil_layers,                       &
@@ -3945,19 +3957,23 @@ cycle
 
    END SUBROUTINE init_soil_depth_1
 
-   SUBROUTINE init_soil_depth_2 ( zs , dzs , num_soil_layers )
+   SUBROUTINE init_soil_depth_2 ( zs , dzs , num_soil_layers, thin_soil_layers )
 
       IMPLICIT NONE
 
       INTEGER, INTENT(IN) :: num_soil_layers
-
+      logical, intent (in) :: thin_soil_layers
       REAL, DIMENSION(1:num_soil_layers), INTENT(OUT)  ::  zs,dzs
 
+      REAL, DIMENSION(1:num_soil_layers)  ::  dzs2
       INTEGER                   ::      l
 
       CHARACTER (LEN=132) :: message
 
       dzs = (/ 0.1 , 0.3 , 0.6 , 1.0 /)
+      dzs2 = (/ 0.05 , 0.1 , 0.25 , 0.6 /)
+
+      if (thin_soil_layers) dzs = dzs2
 
       IF ( num_soil_layers .NE. 4 ) THEN
          write(message,FMT='(A)') 'The Noah and NoahMP LSMs use 4 layers.  Set num_soil_layers=4 in the namelist (&physics).'

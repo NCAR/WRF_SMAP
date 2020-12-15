@@ -305,7 +305,7 @@ CONTAINS
       CALL process_soil_ideal(grid%xland,grid%xice,grid%vegfra,grid%snow,grid%canwat, &
                      grid%ivgtyp,grid%isltyp,grid%tslb,grid%smois, &
                      grid%tsk,grid%tmn,grid%zs,grid%dzs,model_config_rec%num_soil_layers, &
-                     model_config_rec%sf_surface_physics(grid%id), &
+                     model_config_rec%sf_surface_physics(grid%id), model_config_rec%thin_soil_layers,&
                                    ids,ide, jds,jde, kds,kde,&
                                    ims,ime, jms,jme, kms,kme,&
                                    its,ite, jts,jte, kts,kte )

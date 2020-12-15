@@ -2317,6 +2317,7 @@ rconfig   integer ideal_xland             namelist,physics	1             1      
 rconfig   real    swrad_scat              namelist,physics	1             1       irh    "SWRAD_SCAT" "SCATTERING FACTOR IN SWRAD"      ""
 rconfig   integer surface_input_source    namelist,physics	1             3       irh    "surface_input_source"          "1=static (fractional), 2=time dependent (dominant), 3=dominant cateogry from metgrid"      ""
 rconfig   integer num_soil_layers         namelist,physics	1             5       irh    "num_soil_layers"               ""      ""
+rconfig   logical thin_soil_layers        namelist,physics	1          .false.    irh    "thin_soil_layers"               "true:10,30,60,100 cm false:5,10,25,60 cm"      ""
 rconfig   integer maxpatch                namelist,physics      1            10       irh    "maxpatch"                      ""      ""
 rconfig   integer num_snow_layers         namelist,physics	1             3       irh    "num_snow_layers"               ""      ""
 rconfig   integer num_snso_layers         namelist,physics	1             7       irh    "num_snso_layers"               ""      ""

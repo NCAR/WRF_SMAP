@@ -2857,7 +2857,8 @@ integer::oops1,oops2
                                   model_config_rec%num_soil_layers , &
                                   model_config_rec%real_data_init_type , &
                                   num_st_levels_input , num_sm_levels_input , num_sw_levels_input , &
-                                  num_st_levels_alloc , num_sm_levels_alloc , num_sw_levels_alloc )
+                                  num_st_levels_alloc , num_sm_levels_alloc , num_sw_levels_alloc, &
+                                  model_config_rec%thin_soil_layers )
 
       END SELECT interpolate_soil_tmw
 

@@ -1592,6 +1592,7 @@ state   real    aerasy2d     ij     misc         1         -     i{15}r "AERASY2
 state   real    aod5503d     ikj    misc         1         -     r      "AOD5503D"   "3D aerosol optical depth at 550 nm" ""
 state   real    taod5503d    ikj    misc         1         -     r      "TAOD5503D"  "3D aerosol optical depth at 550 nm (MP=28)" ""
 state   real    taod5502d    ij     misc         1         -     rh     "TAOD5502D"  "2D aerosol optical depth at 550 nm (MP=28)" ""
+state   real    smois_sfc    ij     misc         1         -     i{17}rh "SMOIS_SFC"   "Soil moisture to impose" "m3/m3"
 
 # CLWRF-WRF4G
 state    real  T2MIN            ij      misc        1         -      rh3      "T2MIN"                 "MINIMUM TEMPERATURE AT 2M HEIGHT IN DIAGNOSTIC OUTPUT INTERVAL"                      "K"

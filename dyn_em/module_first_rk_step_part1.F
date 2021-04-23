@@ -36,7 +36,7 @@ CONTAINS
                             )
     USE module_state_description
     USE module_model_constants
-    USE module_domain, ONLY : domain, domain_clock_get, get_ijk_from_subgrid
+    USE module_domain, ONLY : domain, domain_clock_get, get_ijk_from_subgrid, Is_alarm_tstep, auxinput17_alarm
     USE module_configure, ONLY : grid_config_rec_type, model_config_rec
     USE module_radiation_driver, ONLY : pre_radiation_driver, radiation_driver
     USE module_surface_driver, ONLY : surface_driver
@@ -911,6 +911,28 @@ BENCH_START(surf_driver_tim)
 
 BENCH_END(surf_driver_tim)
 
+
+     ! PAJ: Impose soil moisture (paj)
+!   print *, 'Just_read_auxinput17 = ', grid%just_read_auxinput17, 'yr, day, hr, minute, sec = ', yr, day, hr, minute, sec
+   if ((config_flags%io_form_auxinput17 /= 0 .and. grid%just_read_auxinput17) &
+       .or. grid%itimestep == 1 ) then
+!     print *, 'Imposing SMOIS_SFC!!!'
+     CALL wrf_debug (200 , ' call Impose_smois_sfc')
+      !$OMP PARALLEL DO   &
+      !$OMP PRIVATE ( ij )
+      do ij = 1 , grid%num_tiles
+           call Impose_smois_sfc (grid%smois,grid%smois_sfc, grid%num_soil_layers, &
+                grid%landmask, grid%sh2o, config_flags%sf_surface_physics,         &
+     &          ids,ide, jds,jde, kds,kde,                                         &
+     &          ims,ime, jms,jme, kms,kme                                          &
+     &          ,ITS=grid%i_start(ij),ITE=min(grid%i_end(ij), ide-1)               &
+     &          ,JTS=grid%j_start(ij),JTE=min(grid%j_end(ij), jde-1)               &
+     &          ,KTS=k_start, KTE=min(k_end,kde-1))
+      end do
+      !$OMP END PARALLEL DO
+   end if
+   grid%just_read_auxinput17 = Is_alarm_tstep (grid%domain_clock, grid%alarms(AUXINPUT17_ALARM))
+
 !*********
 ! pbl
 #if ( WRFPLUS == 1 )
@@ -1593,5 +1615,59 @@ BENCH_START(fdda_driver_tim)
 BENCH_END(fdda_driver_tim)
 
   END SUBROUTINE first_rk_step_part1
+
+  subroutine Impose_smois_sfc (smois, smois_sfc, num_soil_layers, &
+                              landmask, sh2o, sf_surface_physics, &
+                              ids, ide, jds, jde, kds, kde,       &
+                              ims, ime, jms, jme, kms, kme,       &
+                              its, ite, jts, jte, kts, kte        )
+
+   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+   !                                               !
+   ! Purpose: Impose surface soil moisture         !
+   !                                               !
+   ! Author: Pedro A. Jimenez                      !
+   !                                               !
+   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+   use module_state_description, only : LSMSCHEME, NOAHMPSCHEME
+
+   implicit none
+
+   integer, intent(in) :: ids, ide, jds, jde, kds, kde, &
+                          ims, ime, jms, jme, kms, kme, &
+                          its, ite, jts, jte, kts, kte
+   integer, intent (in) :: num_soil_layers, sf_surface_physics
+   real , dimension(ims:ime, jms:jme), intent(in) :: smois_sfc, landmask
+   real, dimension(ims:ime, 1:num_soil_layers, jms:jme), intent(inout):: smois, sh2o
+
+   integer :: i, j
+   real :: sice_tmp
+
+
+   lsm_select: select case(sf_surface_physics)
+     case (LSMSCHEME)
+       do j = jts, jte
+         do i = its, ite
+           if (smois_sfc(i, j) > 0.0 .and. landmask(i, j) > 0.5) smois(i, 1, j) = smois_sfc(i, j)
+         end do
+       end do
+
+     case (NOAHMPSCHEME)
+       do j = jts, jte
+         do i = its, ite
+           if (smois_sfc(i, j) > 0.0 .and. landmask(i, j) > 0.5) then
+             sice_tmp = smois(i, 1, j) - sh2o(i, 1, j)
+             sh2o(i, 1, j) = smois_sfc(i, j)
+             smois(i, 1, j) = sh2o(i, 1, j) + sice_tmp
+           end if
+         end do
+       end do
+
+     case default
+
+   end select lsm_select
+
+  end subroutine Impose_smois_sfc
 
 END MODULE module_first_rk_step_part1

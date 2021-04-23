@@ -1288,6 +1288,7 @@ state   real    v_frame        -       misc         1         -     ir        "v
 # resolve this how?  Have the real program throw a switch to tell the code to get it
 # from the metadata?  Otherwise it's a field?
 state logical just_read_auxinput4  -      misc      -         -     r    "we_just_read_sst"          "1=AUXINPUT4 ALARM RINGING, 0=NO AUXINPUT4 ALARM"  "-"
+state logical just_read_auxinput17  -      misc      -         -     r    "we_just_read_smois_sfc"    "1=AUXINPUT17 ALARM RINGING, 0=NO AUXINPUT4 ALARM"  "-"
 state logical just_read_boundary   -      misc      -         -     r    "we_just_d01_LBC"           "1=BOUNDARY  ALARM RINGING, 0=NO BOUNDARY  ALARM"  "-"
 state   real    mf_fft         -       misc         -         -     r        "mf_fft"                "Mass point map factor at equatorward FFT filter location"  ""
 state   real    p_top          -       misc         -         -     irh       "p_top"                "PRESSURE TOP OF THE MODEL"  "Pa"

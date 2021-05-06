@@ -743,6 +743,14 @@ state    real   ts_tslb         ?!       misc      -         -      -        "TS
 state    real   ts_clw          ?!       misc      -         -      -        "TS_CLW"         "Column integrated cloud water"
 state    real   ts_rainc        ?!       misc      -         -      -        "TS_RAINC"       "Cumulus precip"
 state    real   ts_rainnc       ?!       misc      -         -      -        "TS_RAINNC"      "Grid-scale precip"
+state    real   ts_tslb1        ?!       misc      -         -      -        "TS_TSLB1"        "Soil temperature level 1"
+state    real   ts_tslb2        ?!       misc      -         -      -        "TS_TSLB2"        "Soil temperature level 2"
+state    real   ts_tslb3        ?!       misc      -         -      -        "TS_TSLB3"        "Soil temperature level 3"
+state    real   ts_tslb4        ?!       misc      -         -      -        "TS_TSLB4"        "Soil temperature level 4"
+state    real   ts_smois1       ?!       misc      -         -      -        "TS_SMOIS1"        "Soil moisture level 1"
+state    real   ts_smois2       ?!       misc      -         -      -        "TS_SMOIS2"        "Soil moisture level 2"
+state    real   ts_smois3       ?!       misc      -         -      -        "TS_SMOIS3"        "Soil moisture level 3"
+state    real   ts_smois4       ?!       misc      -         -      -        "TS_SMOIS4"        "Soil moisture level 4"
 
 # Time series of vertical profile of U, V, GHT, THETA, QVAPOR, PRESSURE
 state    real   ts_u_profile   ?!k       misc      -         -      -        "TS_U_PROFILE"   "Wind u-Component, earth relative, vertical profile" "m/s"
@@ -3066,7 +3074,7 @@ package   icedepth_one   seaice_thickness_opt==1     -             state:icedept
 #Time series options for text output
 package   notseries             process_time_series==0                 -             -
 package   tseries               process_time_series==1                 -             state:ts_hour,ts_u,ts_v,ts_q,ts_t,ts_psfc,ts_glw,ts_gsw,ts_hfx,ts_lh,ts_tsk,ts_tslb,ts_clw,ts_rainc,ts_rainnc,ts_u_profile,ts_v_profile,ts_gph_profile,ts_th_profile,ts_p_profile,ts_w_profile
-package   tseries_add_solar     process_time_series==2                 -             state:ts_hour,ts_u,ts_v,ts_q,ts_t,ts_psfc,ts_glw,ts_gsw,ts_hfx,ts_lh,ts_tsk,ts_tslb,ts_clw,ts_rainc,ts_rainnc,ts_u_profile,ts_v_profile,ts_gph_profile,ts_th_profile,ts_cldfrac2d,ts_wvp,ts_lwp,ts_iwp,ts_swp,ts_lwp_tot,ts_iwp_tot,ts_swp_tot,ts_re_qc,ts_re_qi,ts_re_qs,ts_re_qc_tot,ts_re_qi_tot,ts_re_qs_tot,ts_tau_qc,ts_tau_qi,ts_tau_qs,ts_tau_qc_tot,ts_tau_qi_tot,ts_tau_qs_tot,ts_cbaseht,ts_ctopht,ts_cbaseht_tot,ts_ctopht_tot,ts_clrnidx,ts_p_profile,ts_w_profile
+package   tseries_add_solar     process_time_series==2                 -             state:ts_hour,ts_u,ts_v,ts_q,ts_t,ts_psfc,ts_glw,ts_gsw,ts_hfx,ts_lh,ts_tsk,ts_tslb,ts_clw,ts_rainc,ts_rainnc,ts_u_profile,ts_v_profile,ts_gph_profile,ts_th_profile,ts_cldfrac2d,ts_wvp,ts_lwp,ts_iwp,ts_swp,ts_lwp_tot,ts_iwp_tot,ts_swp_tot,ts_re_qc,ts_re_qi,ts_re_qs,ts_re_qc_tot,ts_re_qi_tot,ts_re_qs_tot,ts_tau_qc,ts_tau_qi,ts_tau_qs,ts_tau_qc_tot,ts_tau_qi_tot,ts_tau_qs_tot,ts_cbaseht,ts_ctopht,ts_cbaseht_tot,ts_ctopht_tot,ts_clrnidx,ts_p_profile,ts_w_profile,ts_tslb1,ts_tslb2,ts_tslb3,ts_tslb4,ts_smois1,ts_smois2,ts_smois3,ts_smois4
 
 # WRF-HAILCAST
 state    real   HAILCAST_DHAIL1   ij     misc        1         -      r          "HAILCAST_DHAIL1"     "WRF-HAILCAST Hail Diameter, 1st rank order"     "mm"

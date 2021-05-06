@@ -516,6 +516,15 @@ SUBROUTINE calc_ts( grid )
             grid%ts_ctopht_tot(n,i) = grid%ctopht_tot(ix,iy)
             grid%ts_clrnidx(n,i) = grid%clrnidx(ix,iy)
             grid%ts_sza(n,i) = grid%sza(ix,iy)
+
+            grid%ts_tslb1(n,i) = grid%tslb(ix,1,iy)
+            grid%ts_tslb2(n,i) = grid%tslb(ix,2,iy)
+            grid%ts_tslb3(n,i) = grid%tslb(ix,3,iy)
+            grid%ts_tslb4(n,i) = grid%tslb(ix,4,iy)
+            grid%ts_smois1(n,i) = grid%smois(ix,1,iy)
+            grid%ts_smois2(n,i) = grid%smois(ix,2,iy)
+            grid%ts_smois3(n,i) = grid%smois(ix,3,iy)
+            grid%ts_smois4(n,i) = grid%smois(ix,4,iy)
          END IF
 #else
          grid%ts_tsk(n,i)  = grid%nmm_tsk(ix,iy)
@@ -580,6 +589,15 @@ SUBROUTINE calc_ts( grid )
             grid%ts_ctopht_tot(n,i) = 1.E30
             grid%ts_clrnidx(n,i) = 1.E30
             grid%ts_sza(n,i) = 1.E30
+
+            grid%ts_tslb1(n,i) = 1.E30
+            grid%ts_tslb2(n,i) = 1.E30
+            grid%ts_tslb3(n,i) = 1.E30
+            grid%ts_tslb4(n,i) = 1.E30
+            grid%ts_smois1(n,i) = 1.E30
+            grid%ts_smois2(n,i) = 1.E30
+            grid%ts_smois3(n,i) = 1.E30
+            grid%ts_smois4(n,i) = 1.E30
          END IF
 #endif
          grid%ts_tsk(n,i)  = 1.E30
@@ -787,6 +805,24 @@ SUBROUTINE write_ts( grid )
 
       ts_buf(:,:) = grid%ts_sza(:,:)
       CALL wrf_dm_min_reals(ts_buf(:,:),grid%ts_sza(:,:),grid%ts_buf_size*grid%max_ts_locs)
+
+      ts_buf(:,:) = grid%ts_tslb1(:,:)
+      CALL wrf_dm_min_reals(ts_buf(:,:),grid%ts_tslb1(:,:),grid%ts_buf_size*grid%max_ts_locs)
+      ts_buf(:,:) = grid%ts_tslb2(:,:)
+      CALL wrf_dm_min_reals(ts_buf(:,:),grid%ts_tslb2(:,:),grid%ts_buf_size*grid%max_ts_locs)
+      ts_buf(:,:) = grid%ts_tslb3(:,:)
+      CALL wrf_dm_min_reals(ts_buf(:,:),grid%ts_tslb3(:,:),grid%ts_buf_size*grid%max_ts_locs)
+      ts_buf(:,:) = grid%ts_tslb4(:,:)
+      CALL wrf_dm_min_reals(ts_buf(:,:),grid%ts_tslb4(:,:),grid%ts_buf_size*grid%max_ts_locs)
+
+      ts_buf(:,:) = grid%ts_smois1(:,:)
+      CALL wrf_dm_min_reals(ts_buf(:,:),grid%ts_smois1(:,:),grid%ts_buf_size*grid%max_ts_locs)
+      ts_buf(:,:) = grid%ts_smois2(:,:)
+      CALL wrf_dm_min_reals(ts_buf(:,:),grid%ts_smois2(:,:),grid%ts_buf_size*grid%max_ts_locs)
+      ts_buf(:,:) = grid%ts_smois3(:,:)
+      CALL wrf_dm_min_reals(ts_buf(:,:),grid%ts_smois3(:,:),grid%ts_buf_size*grid%max_ts_locs)
+      ts_buf(:,:) = grid%ts_smois4(:,:)
+      CALL wrf_dm_min_reals(ts_buf(:,:),grid%ts_smois4(:,:),grid%ts_buf_size*grid%max_ts_locs)
    END IF
 #endif
 
@@ -836,7 +872,7 @@ SUBROUTINE write_ts( grid )
                                  grid%ts_clw(n,i)
             ELSE
                !!! WRF-Solar diagnostics
-               WRITE(UNIT=iunit,FMT='(i2,f13.6,i5,i5,i5,1x,39(f13.5,1x))')  &
+               WRITE(UNIT=iunit,FMT='(i2,f13.6,i5,i5,i5,1x,47(f13.5,1x))')  &
                                  grid%id, grid%ts_hour(n,i),                &
                                  grid%id_tsloc(i), ix, iy,                  &
                                  grid%ts_t(n,i),                            &
@@ -877,7 +913,15 @@ SUBROUTINE write_ts( grid )
                                  grid%ts_cbaseht_tot(n,i),                  &
                                  grid%ts_ctopht_tot(n,i),                   &
                                  grid%ts_clrnidx(n,i),                      &
-                                 grid%ts_sza(n,i)
+                                 grid%ts_sza(n,i),                          &
+                                 grid%ts_tslb1(n,i),                        &
+                                 grid%ts_tslb2(n,i),                        &
+                                 grid%ts_tslb3(n,i),                        &
+                                 grid%ts_tslb4(n,i),                        &
+                                 grid%ts_smois1(n,i),                       &
+                                 grid%ts_smois2(n,i),                       &
+                                 grid%ts_smois3(n,i),                       &
+                                 grid%ts_smois4(n,i)
             END IF
 #else
             WRITE(UNIT=iunit,FMT='(i2,f13.6,i5,i5,i5,1x,7(f13.5,1x))')   &

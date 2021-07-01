@@ -4041,6 +4041,9 @@ END subroutine optical_prep_modal_soa_vbs
           vol_wet_a  = vol_dry_a + vol_h2o
           vol_shell  = vol_wet_a - vol_bc
           num_a      = vol_wet_a / (0.52359877*xdia_cm(isize)*xdia_cm(isize)*xdia_cm(isize))
+          
+!           write(*,*)'mass_so4, mass_no3, mass_nh4, mass_oin, mass_oc, mass_bc, mass_na,mass_cl,mass_soil,h2o=', &
+!                      mass_so4, mass_no3, mass_nh4, mass_oin, mass_oc, mass_bc, mass_na,mass_cl,mass_soil,mass_h2o        
 
           !shortwave 
           do ns=1,nswbands
@@ -4060,7 +4063,8 @@ END subroutine optical_prep_modal_soa_vbs
 ! for some reason MADE/SORGAM occasionally produces zero aerosols so
 ! need to add a check here to avoid divide by zero
 !
-          IF(num_a .lt. 1.0e-20 .or. vol_wet_a .lt. 1.0e-20) then
+!          IF(num_a .lt. 1.0e-20 .or. vol_wet_a .lt. 1.0e-20) then  ! rkumar
+          IF(num_a .lt. 1.0e-20 .or. vol_wet_a .lt. 3.12089e-17) then
             dp_dry_a   = xdia_cm(isize)
             dp_wet_a   = xdia_cm(isize)
             dp_bc_a    = xdia_cm(isize)
@@ -4082,7 +4086,7 @@ END subroutine optical_prep_modal_soa_vbs
                        (swref_index_nacl(ns)   * mass_cl  / dens_cl) +   &
                        (swref_index_h2o(ns)    * mass_h2o / dens_h2o) 
           endif
-          if(dp_wet_a/2.0 .lt. dlo_um*1.0e-4/2.0) then
+          if(dp_wet_a/2.0 .le. dlo_um*1.0e-4/2.0) then
             swrefindx(i,k,j,isize,ns)    = (1.5,0.0)
             radius_wet(i,k,j,isize) =dlo_um*1.0e-4/2.0
             number_bin(i,k,j,isize) =num_a
@@ -4103,6 +4107,29 @@ END subroutine optical_prep_modal_soa_vbs
             radius_core(i,k,j,isize) =dp_bc_a/2.0
             swrefindx_core(i,k,j,isize,ns) =ref_index_bc
             swrefindx_shell(i,k,j,isize,ns) =ri_dum/vol_shell
+! rkumar_start (print aerosol mass if real of refractive index is greater than 10.
+            if (ri_ave_a .eq. 0.0 .or. vol_wet_a .lt. 3.12089e-17) then 
+               swrefindx(i,k,j,isize,ns)    = (1.5,0.0)
+               radius_wet(i,k,j,isize) =dlo_um*1.0e-4/2.0
+               number_bin(i,k,j,isize) =num_a
+            endif 
+!            if ( real(ri_ave_a) .ge. 10.0 .or. real(ri_ave_a) .le. 0.0 ) then 
+!               print*, 'SW, i,k,j,isize,ns = ', i,k,j,isize,ns
+!               print*, 'ri_dum, vol_wet_a = ', ri_dum, vol_wet_a
+!               print*, 'swrefindx, radius_wet, vol_wet_a = ', swrefindx(i,k,j,isize,ns), radius_wet(i,k,j,isize), vol_wet_a
+!               print*, 'mass_so4 = ', mass_so4
+!               print*, 'mass_no3 = ', mass_no3
+!               print*, 'mass_nh4 = ', mass_nh4
+!               print*, 'mass_msa = ', mass_msa
+!               print*, 'mass_oin = ', mass_oin
+!               print*, 'mass_soil = ', mass_soil
+!               print*, 'mass_oc = ', mass_oc
+!               print*, 'mass_bc = ', mass_bc
+!               print*, 'mass_na = ', mass_na
+!               print*, 'mass_cl = ', mass_cl
+!               print*, 'mass_h2o = ', mass_h2o
+!           endif 
+! rkumar_end
           endif
         enddo  ! ns shortwave
 
@@ -4124,12 +4151,16 @@ END subroutine optical_prep_modal_soa_vbs
 ! for some reason MADE/SORGAM occasionally produces zero aerosols so
 ! need to add a check here to avoid divide by zero
 !
-          IF(num_a .lt. 1.0e-20 .or. vol_wet_a .lt. 1.0e-20) then
+!          IF(num_a .lt. 1.0e-20 .or. vol_wet_a .lt. 1.0e-20) then   ! rkumar
+          IF(num_a .lt. 1.0e-20 .or. vol_wet_a .lt. 3.12089e-17) then
             dp_dry_a   = xdia_cm(isize) 
             dp_wet_a   = xdia_cm(isize) 
             dp_bc_a    = xdia_cm(isize)
             ri_ave_a   = 0.0
             ri_dum     = 0.0
+            lwrefindx(i,k,j,isize,ns)    = (1.5,0.0)
+            radius_wet(i,k,j,isize) =dlo_um*1.0e-4/2.0
+            number_bin(i,k,j,isize) =num_a
           else
             dp_dry_a   = (1.90985*vol_dry_a/num_a)**0.3333333
             dp_wet_a   = (1.90985*vol_wet_a/num_a)**0.3333333
@@ -4145,7 +4176,7 @@ END subroutine optical_prep_modal_soa_vbs
                        (lwref_index_nacl(ns)   * mass_cl  / dens_cl) +   &
                        (lwref_index_h2o(ns)    * mass_h2o / dens_h2o)
           endif
-          if(dp_wet_a/2.0 .lt. dlo_um*1.0e-4/2.0) then
+          if(dp_wet_a/2.0 .le. dlo_um*1.0e-4/2.0) then
             lwrefindx(i,k,j,isize,ns)    = (1.5,0.0)
             radius_wet(i,k,j,isize) =dlo_um*1.0e-4/2.0
             number_bin(i,k,j,isize) =num_a
@@ -4166,6 +4197,31 @@ END subroutine optical_prep_modal_soa_vbs
             radius_core(i,k,j,isize) =dp_bc_a/2.0
             lwrefindx_core(i,k,j,isize,ns) =ref_index_bc
             lwrefindx_shell(i,k,j,isize,ns) =ri_dum/vol_shell
+
+! rkumar_start (print aerosol mass if real of refractive index is greater than
+! 10.
+            if (ri_ave_a .eq. 0.0 .or. vol_wet_a .lt. 3.12089e-17) then 
+               lwrefindx(i,k,j,isize,ns)    = (1.5,0.0)
+               radius_wet(i,k,j,isize) =dlo_um*1.0e-4/2.0
+               number_bin(i,k,j,isize) =num_a
+            endif 
+!            if ( real(ri_ave_a) .ge. 10.0 .or. real(ri_ave_a) .le. 0 ) then
+!               print*, 'LW, i,k,j,isize,ns = ', i,k,j,isize,ns
+!               print*, 'mass_so4 = ', mass_so4
+!               print*, 'lwrefindx, radius_wet, vol_wet_a = ', lwrefindx(i,k,j,isize,ns), radius_wet(i,k,j,isize), vol_wet_a
+!               print*, 'mass_no3 = ', mass_no3
+!               print*, 'mass_nh4 = ', mass_nh4
+!               print*, 'mass_msa = ', mass_msa
+!               print*, 'mass_oin = ', mass_oin
+!               print*, 'mass_soil = ', mass_soil
+!               print*, 'mass_oc = ', mass_oc
+!               print*, 'mass_bc = ', mass_bc
+!               print*, 'mass_na = ', mass_na
+!               print*, 'mass_cl = ', mass_cl
+!               print*, 'mass_h2o = ', mass_h2o
+!           endif
+! rkumar_end
+
           endif
         enddo  ! ns longwave
 !  refr=real(refindx(i,k,j,isize))
@@ -4682,9 +4738,9 @@ END subroutine optical_prep_modal_soa_vbs
           !ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
           ! retain this diagnostic code
                 if(abs(refr).gt.10.0.or.abs(refr).le.0.001)then
-                     write ( msg, '(a,1x, e14.5)' )  &
+                     write ( msg, '(a,1x, e14.5, 3I3, 1x)' )  &
            'mieaer /refr/ outside range 1e-3 - 10 ' //  &
-           'refr= ', refr
+           'refr,i,j,k= ', refr, iclm, jclm, klevel    ! rkumar  
                      call peg_error_fatal( lunerr, msg )
                 endif
                 if(abs(refi).gt.10.)then
@@ -4939,9 +4995,12 @@ END subroutine optical_prep_modal_soa_vbs
           !ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
           ! retain this diagnostic code
                 if(abs(refr).gt.10.0.or.abs(refr).le.0.001)then
-                     write ( msg, '(a,1x, e14.5)' )  &
+                     write ( msg, '(a,1x, e14.5, 3I3, 1x)' )  &
            'mieaer /refr/ outside range 1e-3 - 10 ' //  &
-           'refr= ', refr
+           'refr,i,j,k= ', refr, iclm, jclm, klevel    ! rkumar  
+!                     write ( msg, '(a,1x, e14.5)' )  &
+!           'mieaer /refr/ outside range 1e-3 - 10 ' //  &
+!           'refr= ', refr
                      call peg_error_fatal( lunerr, msg )
                 endif
                 if(abs(refi).gt.10.)then

@@ -113,7 +113,7 @@
                  l2aer,l3aer,l4aer,l5aer,l6aer,l7aer,                   &
                  totoa_a01,totoa_a02,totoa_a03,totoa_a04,               &
                  totoa_a05,totoa_a06,totoa_a07,totoa_a08,               &
-                 tauaerlw,extaerlw,                                     &
+                 tauaerlw,extaerlw, aerDRF_flag,                        & ! cenlin_AOD
                  ids,ide, jds,jde, kds,kde,                             &
                  ims,ime, jms,jme, kms,kme,                             &
                  its,ite, jts,jte, kts,kte                              )
@@ -132,6 +132,7 @@
    INTEGER,      INTENT(IN   ) :: nbin_o
    REAL(KIND=8), INTENT(IN   ) :: curr_secs
    REAL,         INTENT(IN   ) :: dtstep
+   INTEGER,      INTENT(IN   ) :: aerDRF_flag  ! cenlin_AOD
 !
 ! array that holds all advected chemical species
 !
@@ -298,6 +299,7 @@
           swrefindx,swrefindx_core, swrefindx_shell,                   &
           lwrefindx,lwrefindx_core, lwrefindx_shell,                   &
           uoc_flag,                                                    & ! mklose
+          aerDRF_flag,                                                 & ! cenlin_AOD
           ids,ide, jds,jde, kds,kde,                                   &
           ims,ime, jms,jme, kms,kme,                                   &
           its,ite, jts,jte, kts,kte                                    )
@@ -3544,6 +3546,7 @@ END subroutine optical_prep_modal_soa_vbs
           swrefindx,swrefindx_core, swrefindx_shell,                   &
           lwrefindx,lwrefindx_core, lwrefindx_shell,                   &
           uoc,                                                         & ! mklose
+          aerDRF_flag,                                                 & ! cenlin
           ids,ide, jds,jde, kds,kde,                                   &
           ims,ime, jms,jme, kms,kme,                                   &
           its,ite, jts,jte, kts,kte                                    )
@@ -3566,6 +3569,7 @@ END subroutine optical_prep_modal_soa_vbs
    INTEGER, INTENT(IN   ) :: its,ite, jts,jte, kts,kte, nbin_o
    INTEGER, INTENT(IN   ) :: ims,ime, jms,jme, kms,kme
    INTEGER, INTENT(IN   ) :: ids,ide, jds,jde, kds,kde
+   INTEGER, INTENT(IN   ) :: aerDRF_flag ! cenlin_AOD: 0:all aerosols; 1:no dust; 2:no seasalt;
 
    REAL, DIMENSION( ims:ime, kms:kme, jms:jme, num_chem ),             &
          INTENT(IN ) ::  chem
@@ -4018,6 +4022,21 @@ END subroutine optical_prep_modal_soa_vbs
           vol_soil  = mass_soil  / dens_dust
           vol_msa  = mass_msa  / dens_msa
 !         vol_h2o = mass_h2o / dens_h2o
+
+! cenlin_AOD: add aerosol flag 
+         if (aerDRF_flag .eq. 1) then  ! option=1 for no dust case
+            mass_soil = 0.0
+            vol_soil = 0.0
+         endif
+         if (aerDRF_flag .eq. 2) then  ! option=2 for no seasalt case
+            mass_na = 0.0
+            vol_na = 0.0
+            mass_cl = 0.0
+            vol_cl = 0.0
+         endif
+! cenlin_AOD end
+
+
 ! 7/23/09 SAM calculate vol_h2o from kappas in Petters and Kreidenweis ACP, 2007, vol. 7, 1961-1971.
 !  Their kappas are the hygroscopicities used in Abdul-Razzak and Ghan, 2004, JGR, V105, p. 6837-6844. 
 !  These kappas are defined in module_data_sorgam and module_data_mosaic_asect.

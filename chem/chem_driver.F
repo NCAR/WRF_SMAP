@@ -933,6 +933,38 @@
               grid%tauaerlw6,grid%tauaerlw7,grid%tauaerlw8,grid%tauaerlw9,grid%tauaerlw10,  &
               grid%tauaerlw11,grid%tauaerlw12,grid%tauaerlw13,grid%tauaerlw14,grid%tauaerlw15,  &
               grid%tauaerlw16,    &
+! cenlin_AOD: add new optics variables
+! for no dust case:
+              grid%tauaer1_nodust,grid%tauaer2_nodust,grid%tauaer3_nodust,grid%tauaer4_nodust,  &
+              grid%extaer1_nodust,grid%extaer2_nodust,grid%extaer3_nodust,grid%extaer4_nodust,  &
+              grid%gaer1_nodust,grid%gaer2_nodust,grid%gaer3_nodust,grid%gaer4_nodust,          &
+              grid%waer1_nodust,grid%waer2_nodust,grid%waer3_nodust,grid%waer4_nodust,          &
+              grid%bscoef1_nodust,grid%bscoef2_nodust,grid%bscoef3_nodust,grid%bscoef4_nodust,  &
+              grid%l2aer_nodust,grid%l3aer_nodust,grid%l4aer_nodust,grid%l5aer_nodust,grid%l6aer_nodust,grid%l7aer_nodust,&
+              grid%extaerlw1_nodust,grid%extaerlw2_nodust,grid%extaerlw3_nodust,grid%extaerlw4_nodust, &
+              grid%extaerlw5_nodust,grid%extaerlw6_nodust,grid%extaerlw7_nodust,grid%extaerlw8_nodust, &
+              grid%extaerlw9_nodust,grid%extaerlw10_nodust,grid%extaerlw11_nodust,grid%extaerlw12_nodust, &
+              grid%extaerlw13_nodust,grid%extaerlw14_nodust,grid%extaerlw15_nodust,grid%extaerlw16_nodust, &
+              grid%tauaerlw1_nodust,grid%tauaerlw2_nodust,grid%tauaerlw3_nodust,grid%tauaerlw4_nodust,&
+              grid%tauaerlw5_nodust,grid%tauaerlw6_nodust,grid%tauaerlw7_nodust,grid%tauaerlw8_nodust,&
+              grid%tauaerlw9_nodust,grid%tauaerlw10_nodust,grid%tauaerlw11_nodust,grid%tauaerlw12_nodust,  &
+              grid%tauaerlw13_nodust,grid%tauaerlw14_nodust,grid%tauaerlw15_nodust,grid%tauaerlw16_nodust, &
+! for no sea salt case:
+              grid%tauaer1_noseas,grid%tauaer2_noseas,grid%tauaer3_noseas,grid%tauaer4_noseas,  &
+              grid%extaer1_noseas,grid%extaer2_noseas,grid%extaer3_noseas,grid%extaer4_noseas,  &
+              grid%gaer1_noseas,grid%gaer2_noseas,grid%gaer3_noseas,grid%gaer4_noseas,          &
+              grid%waer1_noseas,grid%waer2_noseas,grid%waer3_noseas,grid%waer4_noseas,          &
+              grid%bscoef1_noseas,grid%bscoef2_noseas,grid%bscoef3_noseas,grid%bscoef4_noseas,  &
+              grid%l2aer_noseas,grid%l3aer_noseas,grid%l4aer_noseas,grid%l5aer_noseas,grid%l6aer_noseas,grid%l7aer_noseas,&
+              grid%extaerlw1_noseas,grid%extaerlw2_noseas,grid%extaerlw3_noseas,grid%extaerlw4_noseas, &
+              grid%extaerlw5_noseas,grid%extaerlw6_noseas,grid%extaerlw7_noseas,grid%extaerlw8_noseas, &
+              grid%extaerlw9_noseas,grid%extaerlw10_noseas,grid%extaerlw11_noseas,grid%extaerlw12_noseas, &
+              grid%extaerlw13_noseas,grid%extaerlw14_noseas,grid%extaerlw15_noseas,grid%extaerlw16_noseas, &
+              grid%tauaerlw1_noseas,grid%tauaerlw2_noseas,grid%tauaerlw3_noseas,grid%tauaerlw4_noseas,&
+              grid%tauaerlw5_noseas,grid%tauaerlw6_noseas,grid%tauaerlw7_noseas,grid%tauaerlw8_noseas,&
+              grid%tauaerlw9_noseas,grid%tauaerlw10_noseas,grid%tauaerlw11_noseas,grid%tauaerlw12_noseas,  &
+              grid%tauaerlw13_noseas,grid%tauaerlw14_noseas,grid%tauaerlw15_noseas,grid%tauaerlw16_noseas, &
+! cenlin_AOD: end
               ids,ide, jds,jde, kds,kde,                                              &
               ims,ime, jms,jme, kms,kme,                                              &
               its,ite, jts,jte, kts,kte)
@@ -1788,7 +1820,149 @@ end if !Chemistry time step check
                                its,ite, jts,jte, kts,kte            )
     endif
 
-   END DO chem_tile_loop_1
+! cenlin_AOD: add optics output
+       !! aerosol optics
+       grid%tauaer1_col(its:ite,jts:jte) = 0.0
+       grid%tauaer2_col(its:ite,jts:jte) = 0.0
+       grid%tauaer3_col(its:ite,jts:jte) = 0.0
+       grid%tauaer4_col(its:ite,jts:jte) = 0.0
+       grid%gaer1_col(its:ite,jts:jte) = 0.0
+       grid%gaer2_col(its:ite,jts:jte) = 0.0
+       grid%gaer3_col(its:ite,jts:jte) = 0.0
+       grid%gaer4_col(its:ite,jts:jte) = 0.0
+       grid%waer1_col(its:ite,jts:jte) = 0.0
+       grid%waer2_col(its:ite,jts:jte) = 0.0
+       grid%waer3_col(its:ite,jts:jte) = 0.0
+       grid%waer4_col(its:ite,jts:jte) = 0.0
+! for no dust
+       grid%tauaer1_col_nodust(its:ite,jts:jte) = 0.0
+       grid%tauaer2_col_nodust(its:ite,jts:jte) = 0.0
+       grid%tauaer3_col_nodust(its:ite,jts:jte) = 0.0
+       grid%tauaer4_col_nodust(its:ite,jts:jte) = 0.0
+       grid%gaer1_col_nodust(its:ite,jts:jte) = 0.0
+       grid%gaer2_col_nodust(its:ite,jts:jte) = 0.0
+       grid%gaer3_col_nodust(its:ite,jts:jte) = 0.0
+       grid%gaer4_col_nodust(its:ite,jts:jte) = 0.0
+       grid%waer1_col_nodust(its:ite,jts:jte) = 0.0
+       grid%waer2_col_nodust(its:ite,jts:jte) = 0.0
+       grid%waer3_col_nodust(its:ite,jts:jte) = 0.0
+       grid%waer4_col_nodust(its:ite,jts:jte) = 0.0
+! for no sea salt
+       grid%tauaer1_col_noseas(its:ite,jts:jte) = 0.0
+       grid%tauaer2_col_noseas(its:ite,jts:jte) = 0.0
+       grid%tauaer3_col_noseas(its:ite,jts:jte) = 0.0
+       grid%tauaer4_col_noseas(its:ite,jts:jte) = 0.0
+       grid%gaer1_col_noseas(its:ite,jts:jte) = 0.0
+       grid%gaer2_col_noseas(its:ite,jts:jte) = 0.0
+       grid%gaer3_col_noseas(its:ite,jts:jte) = 0.0
+       grid%gaer4_col_noseas(its:ite,jts:jte) = 0.0
+       grid%waer1_col_noseas(its:ite,jts:jte) = 0.0
+       grid%waer2_col_noseas(its:ite,jts:jte) = 0.0
+       grid%waer3_col_noseas(its:ite,jts:jte) = 0.0
+       grid%waer4_col_noseas(its:ite,jts:jte) = 0.0
+
+     do k = kts, kte
+        !!! optical depth
+        grid%tauaer1_col(its:ite,jts:jte)=grid%tauaer1_col(its:ite,jts:jte)+grid%tauaer1(its:ite,k,jts:jte)
+        grid%tauaer2_col(its:ite,jts:jte)=grid%tauaer2_col(its:ite,jts:jte)+grid%tauaer2(its:ite,k,jts:jte)
+        grid%tauaer3_col(its:ite,jts:jte)=grid%tauaer3_col(its:ite,jts:jte)+grid%tauaer3(its:ite,k,jts:jte)
+        grid%tauaer4_col(its:ite,jts:jte)=grid%tauaer4_col(its:ite,jts:jte)+grid%tauaer4(its:ite,k,jts:jte)
+        ! for no dust
+        grid%tauaer1_col_nodust(its:ite,jts:jte)=grid%tauaer1_col_nodust(its:ite,jts:jte)+grid%tauaer1_nodust(its:ite,k,jts:jte)
+        grid%tauaer2_col_nodust(its:ite,jts:jte)=grid%tauaer2_col_nodust(its:ite,jts:jte)+grid%tauaer2_nodust(its:ite,k,jts:jte)
+        grid%tauaer3_col_nodust(its:ite,jts:jte)=grid%tauaer3_col_nodust(its:ite,jts:jte)+grid%tauaer3_nodust(its:ite,k,jts:jte)
+        grid%tauaer4_col_nodust(its:ite,jts:jte)=grid%tauaer4_col_nodust(its:ite,jts:jte)+grid%tauaer4_nodust(its:ite,k,jts:jte)
+        ! for no sea salt
+        grid%tauaer1_col_noseas(its:ite,jts:jte)=grid%tauaer1_col_noseas(its:ite,jts:jte)+grid%tauaer1_noseas(its:ite,k,jts:jte)
+        grid%tauaer2_col_noseas(its:ite,jts:jte)=grid%tauaer2_col_noseas(its:ite,jts:jte)+grid%tauaer2_noseas(its:ite,k,jts:jte)
+        grid%tauaer3_col_noseas(its:ite,jts:jte)=grid%tauaer3_col_noseas(its:ite,jts:jte)+grid%tauaer3_noseas(its:ite,k,jts:jte)
+        grid%tauaer4_col_noseas(its:ite,jts:jte)=grid%tauaer4_col_noseas(its:ite,jts:jte)+grid%tauaer4_noseas(its:ite,k,jts:jte)
+
+        !!! single-scattering albedo 
+        grid%waer1_col(its:ite,jts:jte) = grid%waer1_col(its:ite,jts:jte) + &
+                                          grid%waer1(its:ite,k,jts:jte) * grid%tauaer1(its:ite,k,jts:jte)
+        grid%waer2_col(its:ite,jts:jte) = grid%waer2_col(its:ite,jts:jte) + &
+                                          grid%waer2(its:ite,k,jts:jte) * grid%tauaer2(its:ite,k,jts:jte)
+        grid%waer3_col(its:ite,jts:jte) = grid%waer3_col(its:ite,jts:jte) + &
+                                          grid%waer3(its:ite,k,jts:jte) * grid%tauaer3(its:ite,k,jts:jte)
+        grid%waer4_col(its:ite,jts:jte) = grid%waer4_col(its:ite,jts:jte) + &
+                                          grid%waer4(its:ite,k,jts:jte) * grid%tauaer4(its:ite,k,jts:jte)
+        ! for no dust
+        grid%waer1_col_nodust(its:ite,jts:jte) = grid%waer1_col_nodust(its:ite,jts:jte) + &
+                                          grid%waer1_nodust(its:ite,k,jts:jte) * grid%tauaer1_nodust(its:ite,k,jts:jte)
+        grid%waer2_col_nodust(its:ite,jts:jte) = grid%waer2_col_nodust(its:ite,jts:jte) + &
+                                          grid%waer2_nodust(its:ite,k,jts:jte) * grid%tauaer2_nodust(its:ite,k,jts:jte)
+        grid%waer3_col_nodust(its:ite,jts:jte) = grid%waer3_col_nodust(its:ite,jts:jte) + &
+                                          grid%waer3_nodust(its:ite,k,jts:jte) * grid%tauaer3_nodust(its:ite,k,jts:jte)
+        grid%waer4_col_nodust(its:ite,jts:jte) = grid%waer4_col_nodust(its:ite,jts:jte) + &
+                                          grid%waer4_nodust(its:ite,k,jts:jte) * grid%tauaer4_nodust(its:ite,k,jts:jte)
+        ! for no sea salt
+        grid%waer1_col_noseas(its:ite,jts:jte) = grid%waer1_col_noseas(its:ite,jts:jte) + &
+                                          grid%waer1_noseas(its:ite,k,jts:jte) * grid%tauaer1_noseas(its:ite,k,jts:jte)
+        grid%waer2_col_noseas(its:ite,jts:jte) = grid%waer2_col_noseas(its:ite,jts:jte) + &
+                                          grid%waer2_noseas(its:ite,k,jts:jte) * grid%tauaer2_noseas(its:ite,k,jts:jte)
+        grid%waer3_col_noseas(its:ite,jts:jte) = grid%waer3_col_noseas(its:ite,jts:jte) + &
+                                          grid%waer3_noseas(its:ite,k,jts:jte) * grid%tauaer3_noseas(its:ite,k,jts:jte)
+        grid%waer4_col_noseas(its:ite,jts:jte) = grid%waer4_col_noseas(its:ite,jts:jte) + &
+                                          grid%waer4_noseas(its:ite,k,jts:jte) * grid%tauaer4_noseas(its:ite,k,jts:jte)
+
+        !!! asymmetry factor
+        grid%gaer1_col(its:ite,jts:jte) = grid%gaer1_col(its:ite,jts:jte) + &
+             grid%gaer1(its:ite,k,jts:jte) * grid%waer1(its:ite,k,jts:jte) * grid%tauaer1(its:ite,k,jts:jte)
+        grid%gaer2_col(its:ite,jts:jte) = grid%gaer2_col(its:ite,jts:jte) + &
+             grid%gaer2(its:ite,k,jts:jte) * grid%waer2(its:ite,k,jts:jte) * grid%tauaer2(its:ite,k,jts:jte)
+        grid%gaer3_col(its:ite,jts:jte) = grid%gaer3_col(its:ite,jts:jte) + &
+             grid%gaer3(its:ite,k,jts:jte) * grid%waer3(its:ite,k,jts:jte) * grid%tauaer3(its:ite,k,jts:jte)
+        grid%gaer4_col(its:ite,jts:jte) = grid%gaer4_col(its:ite,jts:jte) + &
+             grid%gaer4(its:ite,k,jts:jte) * grid%waer4(its:ite,k,jts:jte) * grid%tauaer4(its:ite,k,jts:jte)
+        ! for no dust
+        grid%gaer1_col_nodust(its:ite,jts:jte) = grid%gaer1_col_nodust(its:ite,jts:jte) + &
+             grid%gaer1_nodust(its:ite,k,jts:jte) * grid%waer1_nodust(its:ite,k,jts:jte) * grid%tauaer1_nodust(its:ite,k,jts:jte)
+        grid%gaer2_col_nodust(its:ite,jts:jte) = grid%gaer2_col_nodust(its:ite,jts:jte) + &
+             grid%gaer2_nodust(its:ite,k,jts:jte) * grid%waer2_nodust(its:ite,k,jts:jte) * grid%tauaer2_nodust(its:ite,k,jts:jte)
+        grid%gaer3_col_nodust(its:ite,jts:jte) = grid%gaer3_col_nodust(its:ite,jts:jte) + &
+             grid%gaer3_nodust(its:ite,k,jts:jte) * grid%waer3_nodust(its:ite,k,jts:jte) * grid%tauaer3_nodust(its:ite,k,jts:jte)
+        grid%gaer4_col_nodust(its:ite,jts:jte) = grid%gaer4_col_nodust(its:ite,jts:jte) + &
+             grid%gaer4_nodust(its:ite,k,jts:jte) * grid%waer4_nodust(its:ite,k,jts:jte) * grid%tauaer4_nodust(its:ite,k,jts:jte)
+        ! for no sea salt
+        grid%gaer1_col_noseas(its:ite,jts:jte) = grid%gaer1_col_noseas(its:ite,jts:jte) + &
+             grid%gaer1_noseas(its:ite,k,jts:jte) * grid%waer1_noseas(its:ite,k,jts:jte) * grid%tauaer1_noseas(its:ite,k,jts:jte)
+        grid%gaer2_col_noseas(its:ite,jts:jte) = grid%gaer2_col_noseas(its:ite,jts:jte) + &
+             grid%gaer2_noseas(its:ite,k,jts:jte) * grid%waer2_noseas(its:ite,k,jts:jte) * grid%tauaer2_noseas(its:ite,k,jts:jte)
+        grid%gaer3_col_noseas(its:ite,jts:jte) = grid%gaer3_col_noseas(its:ite,jts:jte) + &
+             grid%gaer3_noseas(its:ite,k,jts:jte) * grid%waer3_noseas(its:ite,k,jts:jte) * grid%tauaer3_noseas(its:ite,k,jts:jte)
+        grid%gaer4_col_noseas(its:ite,jts:jte) = grid%gaer4_col_noseas(its:ite,jts:jte) + &
+             grid%gaer4_noseas(its:ite,k,jts:jte) * grid%waer4_noseas(its:ite,k,jts:jte) * grid%tauaer4_noseas(its:ite,k,jts:jte)
+
+     end do ! k
+     grid%gaer1_col(its:ite,jts:jte) = grid%gaer1_col(its:ite,jts:jte) / grid%waer1_col(its:ite,jts:jte)
+     grid%gaer2_col(its:ite,jts:jte) = grid%gaer2_col(its:ite,jts:jte) / grid%waer2_col(its:ite,jts:jte)
+     grid%gaer3_col(its:ite,jts:jte) = grid%gaer3_col(its:ite,jts:jte) / grid%waer3_col(its:ite,jts:jte)
+     grid%gaer4_col(its:ite,jts:jte) = grid%gaer4_col(its:ite,jts:jte) / grid%waer4_col(its:ite,jts:jte)
+     grid%waer1_col(its:ite,jts:jte) = grid%waer1_col(its:ite,jts:jte) / grid%tauaer1_col(its:ite,jts:jte)
+     grid%waer2_col(its:ite,jts:jte) = grid%waer2_col(its:ite,jts:jte) / grid%tauaer2_col(its:ite,jts:jte)
+     grid%waer3_col(its:ite,jts:jte) = grid%waer3_col(its:ite,jts:jte) / grid%tauaer3_col(its:ite,jts:jte)
+     grid%waer4_col(its:ite,jts:jte) = grid%waer4_col(its:ite,jts:jte) / grid%tauaer4_col(its:ite,jts:jte)
+     ! for no dust
+     grid%gaer1_col_nodust(its:ite,jts:jte) = grid%gaer1_col_nodust(its:ite,jts:jte) / grid%waer1_col_nodust(its:ite,jts:jte)
+     grid%gaer2_col_nodust(its:ite,jts:jte) = grid%gaer2_col_nodust(its:ite,jts:jte) / grid%waer2_col_nodust(its:ite,jts:jte)
+     grid%gaer3_col_nodust(its:ite,jts:jte) = grid%gaer3_col_nodust(its:ite,jts:jte) / grid%waer3_col_nodust(its:ite,jts:jte)
+     grid%gaer4_col_nodust(its:ite,jts:jte) = grid%gaer4_col_nodust(its:ite,jts:jte) / grid%waer4_col_nodust(its:ite,jts:jte)
+     grid%waer1_col_nodust(its:ite,jts:jte) = grid%waer1_col_nodust(its:ite,jts:jte) / grid%tauaer1_col_nodust(its:ite,jts:jte)
+     grid%waer2_col_nodust(its:ite,jts:jte) = grid%waer2_col_nodust(its:ite,jts:jte) / grid%tauaer2_col_nodust(its:ite,jts:jte)
+     grid%waer3_col_nodust(its:ite,jts:jte) = grid%waer3_col_nodust(its:ite,jts:jte) / grid%tauaer3_col_nodust(its:ite,jts:jte)
+     grid%waer4_col_nodust(its:ite,jts:jte) = grid%waer4_col_nodust(its:ite,jts:jte) / grid%tauaer4_col_nodust(its:ite,jts:jte)
+     ! for no seasalt
+     grid%gaer1_col_noseas(its:ite,jts:jte) = grid%gaer1_col_noseas(its:ite,jts:jte) / grid%waer1_col_noseas(its:ite,jts:jte)
+     grid%gaer2_col_noseas(its:ite,jts:jte) = grid%gaer2_col_noseas(its:ite,jts:jte) / grid%waer2_col_noseas(its:ite,jts:jte)
+     grid%gaer3_col_noseas(its:ite,jts:jte) = grid%gaer3_col_noseas(its:ite,jts:jte) / grid%waer3_col_noseas(its:ite,jts:jte)
+     grid%gaer4_col_noseas(its:ite,jts:jte) = grid%gaer4_col_noseas(its:ite,jts:jte) / grid%waer4_col_noseas(its:ite,jts:jte)
+     grid%waer1_col_noseas(its:ite,jts:jte) = grid%waer1_col_noseas(its:ite,jts:jte) / grid%tauaer1_col_noseas(its:ite,jts:jte)
+     grid%waer2_col_noseas(its:ite,jts:jte) = grid%waer2_col_noseas(its:ite,jts:jte) / grid%tauaer2_col_noseas(its:ite,jts:jte)
+     grid%waer3_col_noseas(its:ite,jts:jte) = grid%waer3_col_noseas(its:ite,jts:jte) / grid%tauaer3_col_noseas(its:ite,jts:jte)
+     grid%waer4_col_noseas(its:ite,jts:jte) = grid%waer4_col_noseas(its:ite,jts:jte) / grid%tauaer4_col_noseas(its:ite,jts:jte)
+
+! cenlin_AOD end
 
 !-- 20201203 rkumar_start (save AOD and Angstrom Exponent output)
 
@@ -1822,6 +1996,7 @@ end if !Chemistry time step check
 
 !-- 20201203 rkumar_end
 
+   END DO chem_tile_loop_1
 
 !-- Work around for dgnum and dgnumwet not being written to restart files.
    

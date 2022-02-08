@@ -3743,6 +3743,12 @@ state   real           aod_600        ij   misc        1         -    i0{12}rh  
 state   real           aod_999        ij   misc        1         -    i0{12}rh           "aod_999"                 "aod_999 "                         "none"
 state   real           ang_exp        ij   misc        1         -    i0{12}rh           "ang_exp"                 "Agstrom Exponent (400-600nm)"     "none"
 ## 20201203 rkumar_end
+
+state   real           dms_mon        ijm       misc        1         -          -            "dms_mon"                "dms_mon "                         "nmol/dm3"
+state   real           no3_mon        i{lgc}jm  misc        1         -          -            "no3_mon"                "no3_mon "                         "volume mixing ratio"
+state   real            oh_mon        i{lgc}jm  misc        1         -          -             "oh_mon"                 "oh_mon "                         "volume mixing ratio"
+state   real          h2o2_mon        i{lgc}jm  misc        1         -          -           "h2o2_mon"               "h2o2_mon "                         "volume mixing ratio"
+state   real             pingc        i{lgc}j   misc        1         -          h              "pingc"      "Pressure levels of gas climatologies"       "HPa"
                                                 
 #
 rconfig   character  emi_inname            namelist,chem        1       "wrfchemi_d<domain>_<date>"   -     "name of chem emissions infile"  ""    ""
@@ -3831,6 +3837,7 @@ rconfig   integer     aer_ra_feedback     namelist,chem          max_domains    
 rconfig   integer     aer_op_opt          namelist,chem          max_domains    1       rh    "aer_op_opt"          ""      ""
 rconfig   integer     opt_pars_out        namelist,chem          1    0       h    "opt_pars_out"          ""      ""
 rconfig   integer     diagnostic_dep      namelist,chem          max_domains    0       rh    "diagnostic_dep"     ""      ""
+rconfig   integer     gasclim_opt         namelist,chem          1              0       rh    "gasclim_opt"         ""      ""
 
 # aircraft emissions
 rconfig   integer    aircraft_emiss_opt           namelist,chem    max_domains  0                                     rh    "aircraft_emiss_opt"                      ""    ""

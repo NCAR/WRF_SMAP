@@ -648,6 +648,12 @@ end if
          (config_flags%gas_ic_opt == GAS_IC_PNNL) ) then
        call gasprofile_init_pnnl( config_flags%chem_opt )
     end if
+
+    ! Initialization of background gas climatologies
+  if (config_flags%gasclim_opt == 1) call Init_backgound_gas_clims (grid%dms_mon, grid%no3_mon, &
+      grid%h2o2_mon, grid%oh_mon, grid%pingc, grid%xlat, grid%xlong, grid%xland, &
+      ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
+
 !
 ! we are doing initialization here, first photolysis
 !
@@ -2128,6 +2134,220 @@ sel_pars: SELECT CASE(config_flags%term_opt)
 END SELECT sel_pars
 
 END SUBROUTINE termite_initialize
+
+  subroutine Init_backgound_gas_clims (dms_mon, no3_mon, h2o2_mon, oh_mon, pingc, xlat, xlong, xland, &
+      ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
+
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    !                                                         !
+    !  Purpose: Stores in memory gas monthly climatologies    !
+    !                                                         !
+    !  Author: Pedro A. Jimenez                               !
+    !                                                         !
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    use netcdf
+    use, intrinsic :: iso_fortran_env, only : REAL32, REAL64
+    use module_physics_init, only : interp_vec
+
+    implicit none
+
+    integer, parameter :: NLAT = 181 , NLON = 288, NMONTH = 12, NLEV = 55
+    integer, intent(in) :: ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte
+    real,  dimension(ims:ime, jms:jme), intent(out) :: xlat, xlong, xland
+    real,  dimension(ims:ime, jms:jme, NMONTH), intent(out) :: dms_mon
+    real,  dimension(ims:ime, NLEV, jms:jme, NMONTH), intent(out) :: no3_mon, h2o2_mon, oh_mon
+    real,  dimension(ims:ime, NLEV, jms:jme), intent(out) :: pingc
+
+    character (len = 13), dimension(NMONTH), parameter :: GMI_FILES = ['gmi_200601.nc', 'gmi_200602.nc', 'gmi_200603.nc', &
+        'gmi_200604.nc', 'gmi_200605.nc', 'gmi_200606.nc', 'gmi_200607.nc', 'gmi_200608.nc', 'gmi_200609.nc', 'gmi_200610.nc', &
+        'gmi_200611.nc', 'gmi_200612.nc' ]
+    real (kind = REAL32), dimension(NLON, NLAT, NMONTH) :: dms_clim
+    real (kind = REAL32), dimension(NLON, NLAT) :: ps, lev2d_clim
+    real (kind = REAL32), dimension(NLON, NLAT, NLEV, 1) :: clim3d
+    real (kind = REAL32), dimension(NLEV) :: hyam, hybm
+    real (kind = REAL32) :: p0
+    real (kind = REAL64), dimension(NLAT) :: lats_clim
+    real (kind = REAL64), dimension(NLON) :: lons_clim
+    real,  dimension(its:ite, jts:jte) :: clim2d, lev2d
+    integer :: status, ncid, ivar, i, j, k, m, itf, ktf, jtf
+
+
+    itf = min (ite, ide - 1)
+    ktf = min (kte, kde - 1)
+    jtf = min (jte, jde - 1)
+
+      ! Read DMS clim
+    status = nf90_open ('dms_1x1.25.nc', NF90_NOWRITE, ncid)
+    call Check_status (status, 'Problems opening file with DMS clim')
+    status = nf90_inq_varid (ncid, 'DMSO', ivar)
+    call Check_status (status, 'Problems getting DMS clim varid')
+    status = nf90_get_var (ncid, ivar, dms_clim)
+    call Check_status (status, 'Problems reading DMS clim')
+    status = nf90_inq_varid (ncid, 'lat', ivar)
+    call Check_status (status, 'Problems getting DMS lat varid')
+    status = nf90_get_var (ncid, ivar, lats_clim)
+    call Check_status (status, 'Problems reading DMS lat varid')
+    status = nf90_inq_varid (ncid, 'lon', ivar)
+    call Check_status (status, 'Problems getting DMS lon varid')
+    status = nf90_get_var (ncid, ivar, lons_clim)
+    call Check_status (status, 'Problems reading DMS lon varid')
+    status = nf90_close (ncid)
+    call Check_status (status, 'Problems closing DMS clim file')
+
+    do m = 1, NMONTH
+      call Interpol_to_wrfgrid (dms_clim(:, :, m), clim2d, mask_land = .true.)
+      do j = jts, jtf
+        do i = its, itf
+          dms_mon(i, j, m) = clim2d(i, j)
+        end do
+      end do
+    end do
+
+      ! Other gases
+    do m = 1, NMONTH
+      status = nf90_open (GMI_FILES(m), NF90_NOWRITE, ncid)
+      call Check_status (status, 'Problems opening GMI file')
+        ! no3
+      status = nf90_inq_varid (ncid, 'no3', ivar)
+      call Check_status (status, 'Problems getting no3 clim varid')
+      status = nf90_get_var (ncid, ivar, clim3d)
+      call Check_status (status, 'Problems getting no3 clim')
+      do k = 1, size (clim3d, dim = 3)
+        call Interpol_to_wrfgrid (clim3d(:, :, k, 1), clim2d, mask_land = .false.)
+        do j = jts, jtf
+          do i = its, itf
+            no3_mon(i, k, j, m) = clim2d(i, j)
+          end do
+        end do
+      end do
+
+        ! oh
+      status = nf90_inq_varid (ncid, 'oh', ivar)
+      call Check_status (status, 'Problems getting oh clim varid')
+      status = nf90_get_var (ncid, ivar, clim3d)
+      call Check_status (status, 'Problems getting oh clim')
+      do k = 1, size (clim3d, dim = 3)
+        call Interpol_to_wrfgrid (clim3d(:, :, k, 1), clim2d, mask_land = .false.)
+        do j = jts, jtf
+          do i = its, itf
+            oh_mon(i, k, j, m) = clim2d(i, j)
+          end do
+        end do
+      end do
+
+        ! h2o2
+      status = nf90_inq_varid (ncid, 'h2o2', ivar)
+      call Check_status (status, 'Problems getting h2o2 clim varid')
+      status = nf90_get_var (ncid, ivar, clim3d)
+      call Check_status (status, 'Problems getting h2o2 clim')
+      do k = 1, size (clim3d, dim = 3)
+        call Interpol_to_wrfgrid (clim3d(:, :, k, 1), clim2d, mask_land = .false.)
+        do j = jts, jtf
+          do i = its, itf
+            h2o2_mon(i, k, j, m) = clim2d(i, j)
+          end do
+        end do
+      end do
+
+      if (m == 1) then
+        status = nf90_inq_varid (ncid, 'hyam', ivar)
+        call Check_status (status, 'Problems getting hyam clim varid')
+        status = nf90_get_var (ncid, ivar, hyam)
+        call Check_status (status, 'Problems getting hyam var')
+
+        status = nf90_inq_varid (ncid, 'hybm', ivar)
+        call Check_status (status, 'Problems getting hybm clim varid')
+        status = nf90_get_var (ncid, ivar, hybm)
+        call Check_status (status, 'Problems getting hybm var')
+
+        status = nf90_inq_varid (ncid, 'ps', ivar)
+        call Check_status (status, 'Problems getting ps clim varid')
+        status = nf90_get_var (ncid, ivar, ps)
+        call Check_status (status, 'Problems getting ps var')
+
+        status = nf90_inq_varid (ncid, 'p0', ivar)
+        call Check_status (status, 'Problems getting p0 clim varid')
+        status = nf90_get_var (ncid, ivar, p0)
+        call Check_status (status, 'Problems getting p0 var')
+
+        do k = 1, NLEV
+          do j = 1, NLON
+            do i = 1, NLAT
+              lev2d_clim(i, j) = hyam(k) * p0 + hybm(k) * ps(i, j)
+            end do
+          end do
+          call Interpol_to_wrfgrid (lev2d_clim, lev2d, mask_land = .false.)
+          do j = jts, jtf
+            do i = its, itf
+              pingc(i, k, j) =  lev2d(i, j)
+            end do
+          end do
+        end do
+      end if
+
+      status = nf90_close (ncid)
+    end do
+
+    contains
+
+    subroutine Check_status (status, error_message)
+
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    !                                                         !
+    !  Purpose: Check status of a netcdf function call and    !
+    !           print user and lib error message              !
+    !                                                         !
+    !  Author: Pedro A. Jimenez                               !
+    !                                                         !
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+      use netcdf
+
+      implicit none
+
+      integer, intent (in) :: status
+      character (len = *), intent (in) :: error_message
+
+      if (status /= NF90_NOERR) then
+        print *, error_message
+        print *, trim (nf90_strerror (status))
+        stop
+      end if
+
+    end subroutine Check_status
+
+    subroutine Interpol_to_wrfgrid (clim_in, clim_out, mask_land)
+
+      real (kind = REAL32), dimension(NLON, NLAT), intent (in) :: clim_in
+      real,  dimension(its:ite, jts:jte), intent(out) :: clim_out
+      logical, intent (in) :: mask_land
+
+      logical, parameter :: IS_PERIODIC = .true.
+      real :: lat_target, lon_target, wlat1, wlat2, wlon1, wlon2
+      integer :: i, j, m, ilon1, ilon2, jlat1, jlat2
+
+
+      Loop_j: do j = jts, jtf
+        Loop_i: do i = its, itf
+          if (xland(i, j) - 1.5 < 0 .and. mask_land) then
+            clim_out(i, j) = 0.0
+            cycle
+          end if
+
+          lat_target = xlat(i, j)
+          lon_target = xlong(i, j)
+          call Interp_vec (real (lats_clim, kind = kind (lat_target)), lat_target, IS_PERIODIC, jlat1, jlat2, wlat1, wlat2)
+          call Interp_vec (real (lons_clim, kind = kind (lon_target)), lon_target, IS_PERIODIC, ilon1, ilon2, wlon1, wlon2)
+
+          clim_out(i, j) = wlon1 * (wlat1 * clim_in(ilon1, jlat1) + wlat2 * clim_in(ilon1, jlat2)) + &
+                           wlon2 * (wlat1 * clim_in(ilon2, jlat1) + wlat2 * clim_in(ilon2, jlat2))
+        end do Loop_i
+      end do Loop_j
+
+    end subroutine Interpol_to_wrfgrid
+
+  end subroutine Init_backgound_gas_clims
 !-----------------------------------------------------------------------
 !
 #ifdef CHEM_DBG_I

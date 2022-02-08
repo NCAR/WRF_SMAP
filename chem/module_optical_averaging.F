@@ -4112,7 +4112,17 @@ END subroutine optical_prep_modal_soa_vbs
                swrefindx(i,k,j,isize,ns)    = (1.5,0.0)
                radius_wet(i,k,j,isize) =dlo_um*1.0e-4/2.0
                number_bin(i,k,j,isize) =num_a
-            endif 
+            endif
+! cenlin_bugfix: to avoid extreme low or high values in ref due to too small/large aerosol mass or volume
+! following rkumar's solution
+            if (real(ri_ave_a) .le. 1e-3 .or. real(ri_ave_a) .ge. 10 &
+                .or. abs(imag(ri_ave_a)) .ge. 10 .or. vol_wet_a .lt. 3.12089e-17) then
+               swrefindx(i,k,j,isize,ns)    = (1.5,0.0)
+               radius_wet(i,k,j,isize) = dlo_um*1.0e-4/2.0
+               number_bin(i,k,j,isize) =num_a
+            endif
+! cenlin_brc: bug fix end
+
 !            if ( real(ri_ave_a) .ge. 10.0 .or. real(ri_ave_a) .le. 0.0 ) then 
 !               print*, 'SW, i,k,j,isize,ns = ', i,k,j,isize,ns
 !               print*, 'ri_dum, vol_wet_a = ', ri_dum, vol_wet_a
@@ -4204,7 +4214,17 @@ END subroutine optical_prep_modal_soa_vbs
                lwrefindx(i,k,j,isize,ns)    = (1.5,0.0)
                radius_wet(i,k,j,isize) =dlo_um*1.0e-4/2.0
                number_bin(i,k,j,isize) =num_a
-            endif 
+            endif
+! cenlin_bugfix: to avoid extreme low or high values in ref due to too small/large aerosol mass or volume
+! following rkumar's solution
+            if (real(ri_ave_a) .le. 1e-3 .or. real(ri_ave_a) .ge. 10 &
+                .or. abs(imag(ri_ave_a)) .ge. 10 .or. vol_wet_a .lt. 3.12089e-17) then
+               lwrefindx(i,k,j,isize,ns)    = (1.5,0.0)
+               radius_wet(i,k,j,isize) = dlo_um*1.0e-4/2.0
+               number_bin(i,k,j,isize) =num_a
+            endif
+! cenlin_brc: bug fix end
+ 
 !            if ( real(ri_ave_a) .ge. 10.0 .or. real(ri_ave_a) .le. 0 ) then
 !               print*, 'LW, i,k,j,isize,ns = ', i,k,j,isize,ns
 !               print*, 'mass_so4 = ', mass_so4
@@ -4751,6 +4771,13 @@ END subroutine optical_prep_modal_soa_vbs
                 endif
           !ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 
+! cenlin_bugfix: for refr and refi outside table range to prevent unstable extrapolation
+          if (refr <= refrtabsw(1,ns))     refr = refrtabsw(1,ns)
+          if (refr >= refrtabsw(prefr,ns)) refr = refrtabsw(prefr,ns)
+          if (refi <= refitabsw(1,ns))     refi = refitabsw(1,ns)
+          if (refi >= refitabsw(prefi,ns)) refi = refitabsw(prefi,ns)
+! cenlin end
+
 ! interpolate coefficients linear in refractive index
 ! first call calcs itab,jtab,ttab,utab
                   itab=0
@@ -5010,6 +5037,13 @@ END subroutine optical_prep_modal_soa_vbs
                      call peg_error_fatal( lunerr, msg )
                 endif
           !ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+
+! cenlin_bugfix: for refr and refi outside table range to prevent unstable extrapolation
+          if (refr <= refrtablw(1,ns))     refr = refrtablw(1,ns)
+          if (refr >= refrtablw(prefr,ns)) refr = refrtablw(prefr,ns)
+          if (refi <= refitablw(1,ns))     refi = refitablw(1,ns)
+          if (refi >= refitablw(prefi,ns)) refi = refitablw(prefi,ns)
+! cenlin end
 
 ! interpolate coefficients linear in refractive index
 ! first call calcs itab,jtab,ttab,utab

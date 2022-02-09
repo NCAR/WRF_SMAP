@@ -286,6 +286,11 @@
       INTRINSIC max, min
 
       REAL, ALLOCATABLE, DIMENSION(:,:,:) :: si_zsigf, si_zsig
+
+      integer :: month_p, month_m
+      real :: wp, wm
+
+
 !<DESCRIPTION>
 !<pre>
 ! chem_driver is the main driver for handling chemistry related tasks
@@ -758,6 +763,8 @@
         CALL ftuv_timestep_init( grid%id, grid%julday )
       endif
 
+    if (config_flags%gasclim_opt == 1) call Get_time_interpol_info (grid%julian, month_p, month_m, wp, wm)
+
 !------------------------------------------------------------------------
 ! Main chemistry tile loop
 !------------------------------------------------------------------------
@@ -802,6 +809,12 @@
                config_flags%kemit                                                     )
        end if
 #endif
+
+      ! Interpolate monthly background gas climatologies to current time
+    if (config_flags%gasclim_opt == 1) call Update_backgound_gas_clims (grid%dms_0, grid%backg_no3, &
+        grid%backg_oh, grid%backg_h2o2, grid%pingc, p_phy, grid%dms_mon, grid%no3_mon, grid%oh_mon, grid%h2o2_mon, &
+        month_p, month_m, wp, wm, &
+        ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte,kts, kte)
 
 
 !--- emissions
@@ -1837,6 +1850,172 @@ end if !Chemistry time step check
      deallocate( irr_rates )
    ENDIF
 
+    contains
+
+      subroutine Get_time_interpol_info (julian, month_p, month_m, wp, wm)
+
+        implicit none
+
+        real, intent (in) :: julian
+        integer, intent (out) :: month_m, month_p
+        real, intent (out) :: wp, wm
+
+   REAL      :: intJULIAN
+   integer   :: np1, m, i, j, np, nm
+   integer   :: IJUL
+   integer, dimension(12) ::  date_oz
+   data date_oz/16, 45, 75, 105, 136, 166, 197, 228, 258, 289, 319, 350/
+   real, parameter :: daysperyear = 365.  ! number of days in a year
+   real      :: cdayozp, cdayozm
+   real      :: fact1, fact2, deltat
+   logical   :: finddate
+   logical   :: ozncyc
+
+
+   ozncyc = .true.
+     ! JULIAN starts from 0.0 at 0Z on 1 Jan.
+   intJULIAN = JULIAN + 1.0       ! offset by one day
+     ! jan 1st 00z is julian=1.0 here
+   IJUL=INT(intJULIAN)
+     ! Note that following will drift.
+     ! Need to use actual month/day info to compute julian.
+   intJULIAN=intJULIAN-FLOAT(IJUL)
+   IJUL=MOD(IJUL,365)
+   IF(IJUL.EQ.0)IJUL=365
+   intJULIAN=intJULIAN+IJUL
+   np1=1
+   finddate=.false.
+
+   do m=1,12
+      if(date_oz(m).gt.intjulian.and..not.finddate) then
+        np1=m
+        finddate=.true.
+      endif
+   enddo
+   cdayozp=date_oz(np1)
+
+   if(np1.gt.1) then
+      cdayozm=date_oz(np1-1)
+      np=np1
+      nm=np-1
+   else
+      cdayozm=date_oz(12)
+      np=np1
+      nm=12
+   endif
+
+   if (ozncyc .and. np1 == 1) then                      ! Dec-Jan interpolation
+      deltat = cdayozp + daysperyear - cdayozm
+      if (intjulian > cdayozp) then                     ! We are in December
+         fact1 = (cdayozp + daysperyear - intjulian)/deltat
+         fact2 = (intjulian - cdayozm)/deltat
+      else                                              ! We are in January
+         fact1 = (cdayozp - intjulian)/deltat
+         fact2 = (intjulian + daysperyear - cdayozm)/deltat
+      end if
+   else
+      deltat = cdayozp - cdayozm
+      fact1 = (cdayozp - intjulian)/deltat
+      fact2 = (intjulian - cdayozm)/deltat
+   end if
+
+   month_p = np
+   month_m = nm
+   wm = fact1
+   wp = fact2
+
+      end subroutine Get_time_interpol_info
+
+    function Interp_vec_1d (vert_in, vert_out, vals_in) result (return_value)
+
+      implicit none
+
+      real, dimension (:), intent (in) :: vert_in, vert_out, vals_in
+      real, dimension (size(vert_out)) :: return_value
+
+      integer :: nz_out, nz_in, k_in, k_out
+      logical :: is_inter_ok
+      real :: dpu, dpl
+
+
+!      print *, vert_in
+!      print *, vert_out
+      nz_out = size (vert_out)
+      nz_in = size (vert_in)
+      do k_out = 1, nz_out
+          ! Interpolation
+        is_inter_ok = .false.
+        do k_in = 1, nz_in
+!          print *, k_in, vert_in(k_in), '>', vert_out(k_out), '.and.', vert_out(k_out), '>=', vert_in(k_in + 1)
+          if (vert_in(k_in) > vert_out(k_out) .and. vert_out(k_out) >= vert_in(k_in + 1)) then
+!             print *, k_in
+             dpu = vert_out(k_out) - vert_in(k_in)
+             dpl = vert_in(k_in + 1) - vert_out(k_out)
+             return_value(k_out) = (vals_in(k_in) * dpl + &
+                                    vals_in(k_in + 1) * dpu) / (dpl + dpu)
+!            print *, dpl / (dpl + dpu), vals_in(k_in)
+!            print *, dpu / (dpl + dpu), vals_in(k_in + 1)
+!            print *, return_value(k_out)
+            is_inter_ok = .true.
+            exit
+          end if
+        end do
+
+!        print *, ' '
+!        print *, 'is_inter_ok = ', is_inter_ok
+!        print *, ' '
+
+          ! Extrapolation
+        if (.not. is_inter_ok) then
+          if (vert_out(k_out) > vert_in(1)) then
+            return_value(k_out) = vals_in(1) * vert_out(k_out) / vert_in(1)
+          else if (vert_out(k_out) < vert_in(nz_in)) then
+            return_value(k_out) = vals_in(nz_in)
+          end if
+        end if
+      end do
+
+    end function Interp_vec_1d
+
+      subroutine Update_backgound_gas_clims (dms_0, backg_no3, &
+        backg_oh, backg_h2o2, pingc, p_phy, dms_mon, no3_mon, oh_mon, h2o2_mon, &
+        month_p, month_m, wp, wm, &
+        ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte,kts, kte)
+
+        implicit none
+
+        real,  dimension(ims:ime, jms:jme), intent(out) :: dms_0
+        real,  dimension(ims:ime, kms:kme, jms:jme), intent(out) :: backg_no3, backg_oh, backg_h2o2
+        integer, parameter :: NMONTH = 12, NLEV = 55
+        real,  dimension(ims:ime, jms:jme, NMONTH), intent(in) :: dms_mon
+        real,  dimension(ims:ime, NLEV, jms:jme, NMONTH), intent(in) :: no3_mon, h2o2_mon, oh_mon
+        real,  dimension(ims:ime, NLEV, jms:jme), intent(in) :: pingc
+        real, dimension(ims:ime, kms:kme, jms:jme), intent(in) :: p_phy
+        real, intent (in) :: wp, wm
+        integer, intent (in) :: month_p, month_m, ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte,kts, kte
+
+        real, dimension(NLEV) :: pingc1d, clim1d
+        integer :: i, j
+
+
+        do j = jts, jte
+          do i = its, ite
+              ! dms
+            dms_0(i, j) = dms_mon(i, j, month_m) * wm + dms_mon (i, j, month_p) * wp
+              ! no3
+            pingc1d = pingc(i, :, j) * 100.0 ! Convert HPa to Pa
+            clim1d = no3_mon(i, :, j, month_m) * wm + no3_mon(i, :, j, month_p) * wp
+            backg_no3(i, kts:kte, j) = Interp_vec_1d (pingc1d, p_phy(i, kts:kte, j), clim1d)
+              ! oh
+            clim1d = oh_mon(i, :, j, month_m) * wm + oh_mon(i, :, j, month_p) * wp
+            backg_oh(i, kts:kte, j) = Interp_vec_1d (pingc1d, p_phy(i, kts:kte, j), clim1d)
+              ! h2o2
+            clim1d = h2o2_mon(i, :, j, month_m) * wm + h2o2_mon(i, :, j, month_p) * wp
+            backg_h2o2(i, kts:kte, j) = Interp_vec_1d (pingc1d, p_phy(i, kts:kte, j), clim1d)
+          end do
+        end do
+
+      end subroutine Update_backgound_gas_clims
 
     END subroutine chem_driver
 

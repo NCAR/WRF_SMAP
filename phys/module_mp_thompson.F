@@ -54,6 +54,7 @@
 
       LOGICAL, PARAMETER, PRIVATE:: iiwarm = .false.
       LOGICAL, PRIVATE:: is_aerosol_aware = .false.
+      LOGICAL, PRIVATE:: is_aerosol_aware_chem = .false.
       LOGICAL, PARAMETER, PRIVATE:: dustyIce = .true.
       LOGICAL, PARAMETER, PRIVATE:: homogIce = .true.
 
@@ -395,7 +396,7 @@
       CONTAINS
 
       SUBROUTINE thompson_init(hgt, orho, nwfa2d, nwfa, nifa,           &
-                          dx, dy, is_start,                             &
+                          dx, dy, is_start, chem_aerosols,              &
                           ids, ide, jds, jde, kds, kde,                 &
                           ims, ime, jms, jme, kms, kme,                 &
                           its, ite, jts, jte, kts, kte)
@@ -414,6 +415,7 @@
       REAL, DIMENSION(ims:ime,kms:kme,jms:jme), OPTIONAL, INTENT(IN) :: orho
       REAL, OPTIONAL, INTENT(IN) :: DX, DY
       LOGICAL, OPTIONAL, INTENT(IN) :: is_start
+      LOGICAL, OPTIONAL, INTENT(IN) :: chem_aerosols
       CHARACTER*256:: mp_debug
 
 
@@ -432,6 +434,12 @@
          write(mp_debug,*) ' DEBUGT  k, hgt = ', k, hgt(its+1,k,jts+1)
          CALL wrf_debug(250, mp_debug)
       enddo
+
+      if (present (chem_aerosols) .and. chem_aerosols) then
+        is_aerosol_aware_chem = .true.
+        has_CCN = .true.
+        has_IN = .true.
+      end if
 
       if (PRESENT(nwfa2d) .AND. PRESENT(nwfa) .AND. PRESENT(nifa)) is_aerosol_aware = .TRUE.
 

@@ -2414,6 +2414,8 @@ rconfig   integer aercu_opt               namelist,physics      1             0 
 rconfig   real    aercu_fct               namelist,physics      1             1.0     -      "aercu_fct"    "aerosol multiplication factor"               ""
 rconfig   integer aercu_used              derived               1             0       -      "aercu_used"   "derived nml for packaging"      ""
 
+rconfig   logical gocart_mp_cpled          namelist,physics     1          .false.    irh     "gocart_mp_cpled" "GOCART aerosols coupled to Thompson MP"    ""
+
 #BSINGH - added shallowcu_forced_ra, numBins, thBinSize, rBinSize, minDeepFreq, minShallowFreq, shcu_aerosols_opt for CuP scheme
 
 rconfig   logical shallowcu_forced_ra     namelist,physics      max_domains    .false.  -    "force radiative impact of shallow Cu (KF-Eta and KF-CuP)"

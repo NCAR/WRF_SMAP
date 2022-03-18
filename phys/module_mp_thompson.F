@@ -54,7 +54,7 @@
 
       LOGICAL, PARAMETER, PRIVATE:: iiwarm = .false.
       LOGICAL, PRIVATE:: is_aerosol_aware = .false.
-      LOGICAL, PRIVATE:: is_aerosol_aware_chem = .false.
+      LOGICAL, public :: is_aerosol_aware_chem = .false.
       LOGICAL, PARAMETER, PRIVATE:: dustyIce = .true.
       LOGICAL, PARAMETER, PRIVATE:: homogIce = .true.
 

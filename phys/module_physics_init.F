@@ -4241,11 +4241,19 @@ CALL lsm_mosaic_init(IVGTYP,config_flags%ISWATER,config_flags%ISURBAN,config_fla
                           its, ite, jts, jte, kts, kte            )
 #endif 
      CASE (THOMPSON)
-         IF(start_of_simulation.or.restart.or.config_flags%cycling)     &
+         IF(start_of_simulation.or.restart.or.config_flags%cycling) then
+           if (config_flags%chem_opt == gocart_simple .and. config_flags%gocart_mp_cpled) then
+            CALL thompson_init(HGT=z_at_q, use_chem_aerosols = .true.,            &
+                          IDS=ids, IDE=ide, JDS=jds, JDE=jde, KDS=kds, KDE=kde,   &
+                          IMS=ims, IME=ime, JMS=jms, JME=jme, KMS=kms, KME=kme,   &
+                          ITS=its, ITE=ite, JTS=jts, JTE=jte, KTS=kts, KTE=kte)
+           else
             CALL thompson_init(HGT=z_at_q,                              &
                           IDS=ids, IDE=ide, JDS=jds, JDE=jde, KDS=kds, KDE=kde,   &
                           IMS=ims, IME=ime, JMS=jms, JME=jme, KMS=kms, KME=kme,   &
                           ITS=its, ITE=ite, JTS=jts, JTE=jte, KTS=kts, KTE=kte)
+           end if
+         end if
 
      CASE (THOMPSONAERO)
 ! Cycling the WRF forecast with moving nests will cause this initialization to be

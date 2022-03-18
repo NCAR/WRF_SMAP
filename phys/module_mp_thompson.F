@@ -52,8 +52,17 @@
 
       IMPLICIT NONE
 
+        ! PAJM:
+        ! First hydrophobic aerosol OC, and second BC
+        ! Radius from Table 2 in Chin et al. (2002): Tropospheric Aerosol Optical Thickness
+        ! from the GOCART Model and Comparisons. JAS, 59, 461 - 483.
+      integer, parameter, public :: N_HPHO_AEROSOLS = 2
+                                                                                            !   OC      BC
+      real, dimension(N_HPHO_AEROSOLS), parameter, private :: MODAL_RADIUS_HPHO_AEROSOLS = [ 0.0212, 0.0118 ]
+
       LOGICAL, PARAMETER, PRIVATE:: iiwarm = .false.
       LOGICAL, PRIVATE:: is_aerosol_aware = .false.
+      LOGICAL, public :: is_aerosol_aware_chem = .false.
       LOGICAL, PARAMETER, PRIVATE:: dustyIce = .true.
       LOGICAL, PARAMETER, PRIVATE:: homogIce = .true.
 
@@ -81,7 +90,7 @@
 !.. the input data.  Look inside the init routine for modifications
 !.. due to surface land-sea points or vegetation characteristics.
       REAL, PARAMETER, PRIVATE:: naIN0 = 1.5E6
-      REAL, PARAMETER, PRIVATE:: naIN1 = 0.5E6
+      REAL, PARAMETER, public :: naIN1 = 0.5E6
       REAL, PARAMETER, PRIVATE:: naCCN0 = 300.0E6
       REAL, PARAMETER, PRIVATE:: naCCN1 = 50.0E6
 
@@ -395,7 +404,7 @@
       CONTAINS
 
       SUBROUTINE thompson_init(hgt, orho, nwfa2d, nwfa, nifa,           &
-                          dx, dy, is_start,                             &
+                          dx, dy, is_start, use_chem_aerosols,          &
                           ids, ide, jds, jde, kds, kde,                 &
                           ims, ime, jms, jme, kms, kme,                 &
                           its, ite, jts, jte, kts, kte)
@@ -414,6 +423,7 @@
       REAL, DIMENSION(ims:ime,kms:kme,jms:jme), OPTIONAL, INTENT(IN) :: orho
       REAL, OPTIONAL, INTENT(IN) :: DX, DY
       LOGICAL, OPTIONAL, INTENT(IN) :: is_start
+      LOGICAL, OPTIONAL, INTENT(IN) :: use_chem_aerosols
       CHARACTER*256:: mp_debug
 
 
@@ -432,6 +442,12 @@
          write(mp_debug,*) ' DEBUGT  k, hgt = ', k, hgt(its+1,k,jts+1)
          CALL wrf_debug(250, mp_debug)
       enddo
+
+      if (present (use_chem_aerosols) .and. use_chem_aerosols) then
+        is_aerosol_aware_chem = .true.
+        has_CCN = .true.
+        has_IN = .true.
+      end if
 
       if (PRESENT(nwfa2d) .AND. PRESENT(nwfa) .AND. PRESENT(nifa)) is_aerosol_aware = .TRUE.
 
@@ -917,7 +933,7 @@
 !..Read a static file containing CCN activation of aerosols. The
 !.. data were created from a parcel model by Feingold & Heymsfield with
 !.. further changes by Eidhammer and Kriedenweis.
-      if (is_aerosol_aware) then
+      if (is_aerosol_aware .or. is_aerosol_aware_chem) then
          CALL wrf_debug(200, '  calling table_ccnAct routine')
          call table_ccnAct
       endif
@@ -974,7 +990,7 @@
 !..This is a wrapper routine designed to transfer values from 3D to 1D.
 !+---+-----------------------------------------------------------------+
       SUBROUTINE mp_gt_driver(qv, qc, qr, qi, qs, qg, ni, nr, nc,       &
-                              nwfa, nifa, nwfa2d, nifa2d,               &
+                              nwfa, nifa, nhphoa, nwfa2d, nifa2d,       &
                               th, pii, p, w, dz, dt_in, itimestep,      &
                               RAINNC, RAINNCV, &
                               SNOWNC, SNOWNCV, &
@@ -999,6 +1015,7 @@
                           qv, qc, qr, qi, qs, qg, ni, nr, th
       REAL, DIMENSION(ims:ime, kms:kme, jms:jme), OPTIONAL, INTENT(INOUT):: &
                           nc, nwfa, nifa
+      REAL, DIMENSION(its:ite, kts:kte, jts:jte, N_HPHO_AEROSOLS), OPTIONAL, INTENT(INOUT):: nhphoa
       REAL, DIMENSION(ims:ime, jms:jme), OPTIONAL, INTENT(IN):: nwfa2d, nifa2d
       REAL, DIMENSION(ims:ime, kms:kme, jms:jme), INTENT(INOUT):: &
                           re_cloud, re_ice, re_snow
@@ -1023,6 +1040,8 @@
                           qv1d, qc1d, qi1d, qr1d, qs1d, qg1d, ni1d,     &
                           nr1d, nc1d, nwfa1d, nifa1d,                   &
                           t1d, p1d, w1d, dz1d, rho, dBZ
+      REAL, DIMENSION(:, :), allocatable :: nhphoa1d
+      integer, dimension(:), allocatable :: rhphoa
       REAL, DIMENSION(kts:kte):: re_qc1d, re_qi1d, re_qs1d
 #if ( WRF_CHEM == 1 )
       REAL, DIMENSION(kts:kte):: &
@@ -1032,7 +1051,7 @@
       REAL:: dt, pptrain, pptsnow, pptgraul, pptice
       REAL:: qc_max, qr_max, qs_max, qi_max, qg_max, ni_max, nr_max
       REAL:: nwfa1
-      INTEGER:: i, j, k
+      INTEGER:: i, j, k, n, n_hpho
       INTEGER:: imax_qc,imax_qr,imax_qi,imax_qs,imax_qg,imax_ni,imax_nr
       INTEGER:: jmax_qc,jmax_qr,jmax_qi,jmax_qs,jmax_qg,jmax_ni,jmax_nr
       INTEGER:: kmax_qc,kmax_qr,kmax_qi,kmax_qs,kmax_qg,kmax_ni,kmax_nr
@@ -1098,6 +1117,21 @@
          write(mp_debug,*) 'WARNING, nc-nwfa-nifa-nwfa2d present but is_aerosol_aware is FALSE'
          CALL wrf_debug(0, mp_debug)
       endif
+      if (is_aerosol_aware_chem .and. (.not. present(nwfa)) .and. &
+                                      (.not. present(nifa)) .and. &
+                                      (.not. present(nc)) .and. &
+                                      (.not. present(nhphoa)) )   &
+          call wrf_error_fatal ("is_aerosol_aware_chem requires optional arrays nc, nwfa, nifa, &
+              and nhphoa.")
+
+      if (is_aerosol_aware_chem) then
+        rhphoa = MODAL_RADIUS_HPHO_AEROSOLS
+        n_hpho = N_HPHO_AEROSOLS
+      else
+        n_hpho = 0
+        allocate (rhphoa(n_hpho))
+      end if
+      allocate (nhphoa1d(kts:kte, n_hpho))
 
       j_loop:  do j = j_start, j_end
       i_loop:  do i = i_start, i_end
@@ -1130,29 +1164,47 @@
             nr1d(k) = nr(i,k,j)
             rho(k) = 0.622*p1d(k)/(R*t1d(k)*(qv1d(k)+0.622))
          enddo
-         if (is_aerosol_aware) then
+
+         if (is_aerosol_aware .or. is_aerosol_aware_chem) then
             do k = kts, kte
                nc1d(k) = nc(i,k,j)
                nwfa1d(k) = nwfa(i,k,j)
                nifa1d(k) = nifa(i,k,j)
             enddo
-            nwfa1 = nwfa2d(i,j)
+!            nwfa1 = nwfa2d(i,j)
+            if (is_aerosol_aware_chem) then
+              do n = 1, n_hpho
+                do k = kts, kte
+                  nhphoa1d(k, n) = nhphoa(i, k, j, n)
+                enddo
+              end do
+            else
+              do n = 1, n_hpho
+                do k = kts, kte
+                  nhphoa1d(k, n) = 0.0
+                end do
+              enddo
+            end if
          else
             do k = kts, kte
                nc1d(k) = Nt_c/rho(k)
                nwfa1d(k) = 11.1E6/rho(k)
                nifa1d(k) = naIN1*0.01/rho(k)
+               do n = 1, n_hpho
+                 nhphoa1d(k,  n) = 0.0
+               end do
             enddo
-            nwfa1 = 11.1E6
+!            nwfa1 = 11.1E6
          endif
 
          call mp_thompson(qv1d, qc1d, qi1d, qr1d, qs1d, qg1d, ni1d,     &
-                      nr1d, nc1d, nwfa1d, nifa1d, t1d, p1d, w1d, dz1d,  &
+                      nr1d, nc1d, nwfa1d, nifa1d, nhphoa1d, rhphoa, &
+                      t1d, p1d, w1d, dz1d,  &
                       pptrain, pptsnow, pptgraul, pptice, &
 #if ( WRF_CHEM == 1 )
                       rainprod1d, evapprod1d, &
 #endif
-                      kts, kte, dt, i, j)
+                      kts, kte, dt, i, j, n_hpho)
 
          pcp_ra(i,j) = pptrain
          pcp_sn(i,j) = pptsnow
@@ -1186,6 +1238,17 @@
                nifa(i,k,j) = nifa1d(k)
             enddo
          endif
+
+         if (is_aerosol_aware_chem) then
+            do k = kts, kte
+               nc(i,k,j) = nc1d(k)
+               nwfa(i,k,j) = nwfa1d(k)
+               nifa(i,k,j) = nifa1d(k)
+               do n = 1, n_hpho
+                 nhphoa(i, k, j, n) = nhphoa1d(k, n)
+               end do
+            enddo
+         end if
 
          do k = kts, kte
             qv(i,k,j) = qv1d(k)
@@ -1350,20 +1413,23 @@
 !+---+-----------------------------------------------------------------+
 !
       subroutine mp_thompson (qv1d, qc1d, qi1d, qr1d, qs1d, qg1d, ni1d, &
-                          nr1d, nc1d, nwfa1d, nifa1d, t1d, p1d, w1d, dzq, &
+                          nr1d, nc1d, nwfa1d, nifa1d, nhphoa1d, rhphoa, &
+                          t1d, p1d, w1d, dzq, &
                           pptrain, pptsnow, pptgraul, pptice, &
 #if ( WRF_CHEM == 1 )
                           rainprod, evapprod, &
 #endif
-                          kts, kte, dt, ii, jj)
+                          kts, kte, dt, ii, jj, n_hpho)
 
       implicit none
 
 !..Sub arguments
-      INTEGER, INTENT(IN):: kts, kte, ii, jj
+      INTEGER, INTENT(IN):: kts, kte, ii, jj, n_hpho
       REAL, DIMENSION(kts:kte), INTENT(INOUT):: &
                           qv1d, qc1d, qi1d, qr1d, qs1d, qg1d, ni1d, &
                           nr1d, nc1d, nwfa1d, nifa1d, t1d
+      REAL, DIMENSION(kts:kte, n_hpho), INTENT(INOUT):: nhphoa1d
+      integer, dimension(n_hpho), intent (in) :: rhphoa
       REAL, DIMENSION(kts:kte), INTENT(IN):: p1d, w1d, dzq
       REAL, INTENT(INOUT):: pptrain, pptsnow, pptgraul, pptice
       REAL, INTENT(IN):: dt
@@ -1375,6 +1441,7 @@
 !..Local variables
       REAL, DIMENSION(kts:kte):: tten, qvten, qcten, qiten, &
            qrten, qsten, qgten, niten, nrten, ncten, nwfaten, nifaten
+      REAL, DIMENSION(kts:kte, n_hpho):: nhphoaten
 
       DOUBLE PRECISION, DIMENSION(kts:kte):: prw_vcd
 
@@ -1383,6 +1450,7 @@
 
       DOUBLE PRECISION, DIMENSION(kts:kte):: pna_rca, pna_sca, pna_gca, &
            pnd_rcd, pnd_scd, pnd_gcd
+      DOUBLE PRECISION, DIMENSION(kts:kte, n_hpho):: pnp_rcp, pnp_scp, pnp_gcp
 
       DOUBLE PRECISION, DIMENSION(kts:kte):: prr_wau, prr_rcw, prr_rcs, &
            prr_rcg, prr_sml, prr_gml, &
@@ -1409,6 +1477,7 @@
 
       REAL, DIMENSION(kts:kte):: temp, pres, qv
       REAL, DIMENSION(kts:kte):: rc, ri, rr, rs, rg, ni, nr, nc, nwfa, nifa
+      REAL, DIMENSION(kts:kte, n_hpho):: nhphoa
       REAL, DIMENSION(kts:kte):: rho, rhof, rhof2
       REAL, DIMENSION(kts:kte):: qvs, qvsi, delQvs
       REAL, DIMENSION(kts:kte):: satw, sati, ssatw, ssati
@@ -1501,6 +1570,7 @@
          ncten(k) = 0.
          nwfaten(k) = 0.
          nifaten(k) = 0.
+         nhphoaten(k, :) = 0.0
 
          prw_vcd(k) = 0.
 
@@ -1569,6 +1639,10 @@
          pnd_rcd(k) = 0.
          pnd_scd(k) = 0.
          pnd_gcd(k) = 0.
+
+         pnp_rcp(k, :) = 0.
+         pnp_scp(k, :) = 0.
+         pnp_gcp(k, :) = 0.
       enddo
 #if ( WRF_CHEM == 1 )
       do k = kts, kte
@@ -1599,6 +1673,9 @@
          rho(k) = 0.622*pres(k)/(R*temp(k)*(qv(k)+0.622))
          nwfa(k) = MAX(11.1E6, MIN(9999.E6, nwfa1d(k)*rho(k)))
          nifa(k) = MAX(naIN1*0.01, MIN(9999.E6, nifa1d(k)*rho(k)))
+         do n = 1, n_hpho
+           nhphoa(k, n) = max (0.0, nhphoa1d(k, n) * rho(k))
+         end do
 
          if (qc1d(k) .gt. R1) then
             no_micro = .false.
@@ -1615,7 +1692,7 @@
             endif
             nc(k) = MIN( DBLE(Nt_c_max), ccg(1,nu_c)*ocg2(nu_c)*rc(k)   &
                   / am_r*lamc**bm_r)
-            if (.NOT. is_aerosol_aware) nc(k) = Nt_c
+            if ((.NOT. is_aerosol_aware) .and. (.not. is_aerosol_aware_chem)) nc(k) = Nt_c
          else
             qc1d(k) = 0.0
             nc1d(k) = 0.0
@@ -1937,6 +2014,14 @@
           pnd_rcd(k) = rhof(k)*t1_qr_qc*Ef_ra*nifa(k)*N0_r(k)           &
                          *((lamr+fv_r)**(-cre(9)))
           pnd_rcd(k) = MIN(DBLE(nifa(k)*odts), pnd_rcd(k))
+
+            ! PAJM: hydrophobic aerosol
+          do n = 1, n_hpho
+            Ef_ra = Eff_aero(mvd_r(k), 2.0 * rhphoa(n),visco(k),rho(k),temp(k),'r')
+            pnp_rcp(k, n) = rhof(k)*t1_qr_qc*Ef_ra*nhphoa(k, n)*N0_r(k)           &
+                           *((lamr+fv_r)**(-cre(9)))
+            pnp_rcp(k, n) = MIN(DBLE(nhphoa(k, n)*odts), pnp_rcp(k, n))
+          end do
          endif
 
       enddo
@@ -2143,6 +2228,13 @@
           Ef_sa = Eff_aero(xDs,0.8E-6,visco(k),rho(k),temp(k),'s')
           pnd_scd(k) = rhof(k)*t1_qs_qc*Ef_sa*nifa(k)*smoe(k)
           pnd_scd(k) = MIN(DBLE(nifa(k)*odts), pnd_scd(k))
+
+            ! PAJM: hydrophobic aerosol
+          do n = 1, n_hpho
+            Ef_sa = Eff_aero(xDs, 2.0 * rhphoa(n),visco(k),rho(k),temp(k),'s')
+            pnp_scp(k, n) = rhof(k)*t1_qs_qc*Ef_sa*nhphoa(k, n)*smoe(k)
+            pnp_scp(k, n) = MIN(DBLE(nhphoa(k, n)*odts), pnp_scp(k, n))
+          end do
          endif
          if (rg(k) .gt. r_g(1)) then
           xDg = (bm_g + mu_g + 1.) * ilamg(k)
@@ -2155,6 +2247,14 @@
           pnd_gcd(k) = rhof(k)*t1_qg_qc*Ef_ga*nifa(k)*N0_g(k)           &
                         *ilamg(k)**cge(9)
           pnd_gcd(k) = MIN(DBLE(nifa(k)*odts), pnd_gcd(k))
+
+            ! PAJM: hydrophobic aerosol
+          do n = 1, n_hpho
+            Ef_ga = Eff_aero(xDg,0.0330E-6,visco(k),rho(k),temp(k),'g')
+            pnp_gcp(k, n) = rhof(k)*t1_qg_qc*Ef_ga*nhphoa(k, n)*N0_g(k)           &
+                          *ilamg(k)**cge(9)
+            pnp_gcp(k, n) = MIN(DBLE(nhphoa(k, n)*odts), pnp_gcp(k, n))
+          end do
          endif
 
 !..Rain collecting snow.  Cannot assume Wisner (1972) approximation
@@ -2238,7 +2338,7 @@
 !.. Implemented by T. Eidhammer and G. Thompson 2012Dec18
 !+---+-----------------------------------------------------------------+
 
-          if (dustyIce .AND. is_aerosol_aware) then
+          if (dustyIce .AND. (is_aerosol_aware .or. is_aerosol_aware_chem)) then
            xni = iceDeMott(tempc,qvs(k),qvs(k),qvsi(k),rho(k),nifa(k))
           else
            xni = 1.0 *1000.                                               ! Default is 1.0 per Liter
@@ -2286,7 +2386,7 @@
 !.. we may need to relax the temperature and ssati constraints.
           if ( (ssati(k).ge. 0.25) .or. (ssatw(k).gt. eps &
                                 .and. temp(k).lt.253.15) ) then
-           if (dustyIce .AND. is_aerosol_aware) then
+           if (dustyIce .AND. (is_aerosol_aware .or. is_aerosol_aware_chem)) then
             xnc = iceDeMott(tempc,qv(k),qvs(k),qvsi(k),rho(k),nifa(k))
            else
             xnc = MIN(250.E3, TNO*EXP(ATO*(T_0-temp(k))))
@@ -2299,7 +2399,7 @@
 
 !..Freezing of aqueous aerosols based on Koop et al (2001, Nature)
           xni = smo0(k)+ni(k) + (pni_rfz(k)+pni_wfz(k)+pni_inu(k))*dtsave
-          if (is_aerosol_aware .AND. homogIce .AND. (xni.le.999.E3)     &
+          if ((is_aerosol_aware .or. is_aerosol_aware_chem) .AND. homogIce .AND. (xni.le.999.E3)     &
      &                .AND.(temp(k).lt.238).AND.(ssati(k).ge.0.4) ) then
             xnc = iceKoop(temp(k),qv(k),qvs(k),nwfa(k), dtsave)
             pni_iha(k) = xnc*odts
@@ -2593,7 +2693,7 @@
          lfus2 = lsub - lvap(k)
 
 !..Aerosol number tendency
-         if (is_aerosol_aware) then
+         if (is_aerosol_aware .or. is_aerosol_aware_chem) then
             nwfaten(k) = nwfaten(k) - (pna_rca(k) + pna_sca(k)          &
                        + pna_gca(k) + pni_iha(k)) * orho
             nifaten(k) = nifaten(k) - (pnd_rcd(k) + pnd_scd(k)          &
@@ -2603,6 +2703,10 @@
             else
                nifaten(k) = 0.
             endif
+            do n = 1, n_hpho
+              nhphoaten(k, n) = nhphoaten(k, n) - (pnp_rcp(k, n) + pnp_scp(k, n)          &
+                       + pnp_gcp(k, n)) * orho
+            end do
          endif
 
 !..Water vapor tendency
@@ -2785,7 +2889,7 @@
          if ((qc1d(k) + qcten(k)*DT) .gt. R1) then
             rc(k) = (qc1d(k) + qcten(k)*DT)*rho(k)
             nc(k) = MAX(2., MIN((nc1d(k)+ncten(k)*DT)*rho(k), Nt_c_max))
-            if (.NOT. is_aerosol_aware) nc(k) = Nt_c
+            if ((.NOT. is_aerosol_aware) .and. (.not. is_aerosol_aware_chem)) nc(k) = Nt_c
             L_qc(k) = .true.
          else
             rc(k) = R1
@@ -2954,7 +3058,7 @@
            prw_vcd(k) = clap*odt
 !+---+-----------------------------------------------------------------+ !  DROPLET NUCLEATION
            if (clap .gt. eps) then
-            if (is_aerosol_aware) then
+            if (is_aerosol_aware .or. is_aerosol_aware_chem) then
                xnc = MAX(2., activ_ncloud(temp(k), w1d(k), nwfa(k)))
             else
                xnc = Nt_c
@@ -2962,7 +3066,7 @@
             pnc_wcd(k) = 0.5*(xnc-nc(k) + abs(xnc-nc(k)))*odts*orho
 
 !+---+-----------------------------------------------------------------+ !  EVAPORATION
-           elseif (clap .lt. -eps .AND. ssatw(k).lt.-1.E-6 .AND. is_aerosol_aware) then
+           elseif (clap .lt. -eps .AND. ssatw(k).lt.-1.E-6 .AND. (is_aerosol_aware .or. is_aerosol_aware_chem)) then
             tempc = temp(k) - 273.15
             otemp = 1./temp(k)
             rvs = rho(k)*qvs(k)
@@ -3026,7 +3130,7 @@
           rc(k) = MAX(R1, (qc1d(k) + DT*qcten(k))*rho(k))
           if (rc(k).eq.R1) L_qc(k) = .false.
           nc(k) = MAX(2., MIN((nc1d(k)+ncten(k)*DT)*rho(k), Nt_c_max))
-          if (.NOT. is_aerosol_aware) nc(k) = Nt_c
+          if ((.NOT. is_aerosol_aware) .and. (.not. is_aerosol_aware_chem)) nc(k) = Nt_c
           qv(k) = MAX(1.E-10, qv1d(k) + DT*qvten(k))
           temp(k) = t1d(k) + DT*tten(k)
           rho(k) = 0.622*pres(k)/(R*temp(k)*(qv(k)+0.622))
@@ -3490,6 +3594,9 @@
                        (nwfa1d(k)+nwfaten(k)*DT)))
          nifa1d(k) = MAX(naIN1*0.01, MIN(9999.E6,                       &
                        (nifa1d(k)+nifaten(k)*DT)))
+         do n = 1, n_hpho
+           nhphoa1d(k, n) = MAX(0.0, nhphoa1d(k, n) + nhphoaten(k, n) * DT)
+         end do
 
          if (qc1d(k) .le. R1) then
            qc1d(k) = 0.0
@@ -5054,7 +5161,7 @@
          rho(k) = 0.622*p1d(k)/(R*t1d(k)*(qv1d(k)+0.622))
          rc(k) = MAX(R1, qc1d(k)*rho(k))
          nc(k) = MAX(2., MIN(nc1d(k)*rho(k), Nt_c_max))
-         if (.NOT. is_aerosol_aware) nc(k) = Nt_c
+         if ((.NOT. is_aerosol_aware) .and. (.not. is_aerosol_aware_chem)) nc(k) = Nt_c
          if (rc(k).gt.R1 .and. nc(k).gt.R2) has_qc = .true.
          ri(k) = MAX(R1, qi1d(k)*rho(k))
          ni(k) = MAX(R2, ni1d(k)*rho(k))

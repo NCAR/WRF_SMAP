@@ -2414,6 +2414,8 @@ rconfig   integer aercu_opt               namelist,physics      1             0 
 rconfig   real    aercu_fct               namelist,physics      1             1.0     -      "aercu_fct"    "aerosol multiplication factor"               ""
 rconfig   integer aercu_used              derived               1             0       -      "aercu_used"   "derived nml for packaging"      ""
 
+rconfig   logical gocart_mp_cpled          namelist,physics     1          .false.    irh     "gocart_mp_cpled" "GOCART aerosols coupled to Thompson MP"    ""
+
 #BSINGH - added shallowcu_forced_ra, numBins, thBinSize, rBinSize, minDeepFreq, minShallowFreq, shcu_aerosols_opt for CuP scheme
 
 rconfig   logical shallowcu_forced_ra     namelist,physics      max_domains    .false.  -    "force radiative impact of shallow Cu (KF-Eta and KF-CuP)"
@@ -2815,7 +2817,7 @@ package   fer_mp_hires    mp_physics==5                -             moist:qv,qc
 package   fer_mp_hires_advect  mp_physics==15          -             moist:qv,qc,qr,qi;scalar:qrimef
 package   wsm6scheme      mp_physics==6                -             moist:qv,qc,qr,qi,qs,qg;state:re_cloud,re_ice,re_snow
 package   nuwrf4icescheme mp_physics==7              -               moist:qv,qc,qr,qi,qs,qg,qh;state:phys_tot,physc,physe,physd,physs,physm,physf,acphys_tot,acphysc,acphyse,acphysd,acphyss,acphysm,acphysf,preci3d,precs3d,precg3d,precr3d,prech3d,re_cloud_gsfc,re_rain_gsfc,re_ice_gsfc,re_snow_gsfc,re_graupel_gsfc,re_hail_gsfc,re_cloud,re_ice,re_snow
-package   thompson        mp_physics==8                -             moist:qv,qc,qr,qi,qs,qg;scalar:qni,qnr;state:re_cloud,re_ice,re_snow
+package   thompson        mp_physics==8                -             moist:qv,qc,qr,qi,qs,qg;scalar:qni,qnr,qnc,qnwfa,qnifa;state:re_cloud,re_ice,re_snow
 package   milbrandt2mom   mp_physics==9                -             moist:qv,qc,qr,qi,qs,qg,qh;scalar:qnc,qnr,qni,qns,qng,qnh
 package   morr_two_moment mp_physics==10               -             moist:qv,qc,qr,qi,qs,qg;scalar:qni,qns,qnr,qng;state:rqrcuten,rqscuten,rqicuten
 package   cammgmpscheme   mp_physics==11               -             moist:qv,qc,qi,qr,qs;scalar:qnc,qni,qnr,qns;state:rh_old_mp,lcd_old_mp,cldfra_old_mp,cldfra_mp,cldfra_mp_all,cldfra_conv,cldfrai,cldfral,turbtype3d,smaw3d,wsedl3d,icwmrdp3d,dp3d,shfrc3d,dlf,dlf2,tke_pbl,lradius,iradius

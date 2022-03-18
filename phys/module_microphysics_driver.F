@@ -2,6 +2,15 @@
 ! *** add new modules of schemes here
 !
 MODULE module_microphysics_driver
+      ! GOCART parameters
+    real, parameter, dimension(5) :: MASS2NUMBER_DUST = (/2.4547e+14, 3.2831e+13, &
+                                     6.5168e+12, 9.8862e+11, 1.7595e+11/)
+    real, parameter, dimension(5) :: MASS2NUMBER_SEASALT = (/3.0174e+17, 1.0851e+16, &
+                                     1.2070e+14, 9.3908e+12, 2.9217e+11 /)
+    real, parameter :: MASS2NUMBER_SO4 = 9.0143e+16
+    real, parameter  :: MASS2NUMBER_OC = 9.7576e+17
+    real, parameter  :: MASS2NUMBER_BC = 1.5002e+19
+    real, parameter :: MICROG2KG = 1.0e-9
 CONTAINS
 
 SUBROUTINE microphysics_driver(                                          &
@@ -751,6 +760,11 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
    REAL :: constants_irrigation,tloc,irr_start,phase
    INTEGER, OPTIONAL, DIMENSION( ims:ime , jms:jme ), INTENT(INOUT) :: irr_rand_field
 
+     ! paj
+   real, dimension(:, :, :), allocatable :: percen_dust1, percen_dust2, percen_dust3, percen_dust4, percen_dust5, &
+       percen_seas1, percen_seas2, percen_seas3, percen_seas4, percen_oc_hphi, percen_so4, percen_bc_hphi
+   real, dimension(:, :, :, :), allocatable :: qnhphoa_curr
+
 !---------------------------------------------------------------------
 !  check for microphysics type.  We need a clean way to
 !  specify these things!
@@ -1069,7 +1083,191 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
                  qi_b4mp(its:ite,kts:kte,jts:jte) = qi_curr(its:ite,kts:kte,jts:jte)
                  qs_b4mp(its:ite,kts:kte,jts:jte) = qs_curr(its:ite,kts:kte,jts:jte)
 #endif
-             CALL mp_gt_driver(                          &
+               if_is_aerosol_aware_chem: if (is_aerosol_aware_chem) then
+
+#if ( WRF_CHEM == 1 )
+! paj
+   allocate (percen_dust1(its:ite, kts:kte, jts:jte))
+   allocate (percen_dust2(its:ite, kts:kte, jts:jte))
+   allocate (percen_dust3(its:ite, kts:kte, jts:jte))
+   allocate (percen_dust4(its:ite, kts:kte, jts:jte))
+   allocate (percen_dust5(its:ite, kts:kte, jts:jte))
+   allocate (percen_seas1(its:ite, kts:kte, jts:jte))
+   allocate (percen_seas2(its:ite, kts:kte, jts:jte))
+   allocate (percen_seas3(its:ite, kts:kte, jts:jte))
+   allocate (percen_seas4(its:ite, kts:kte, jts:jte))
+   allocate (percen_oc_hphi(its:ite, kts:kte, jts:jte))
+   allocate (percen_so4(its:ite, kts:kte, jts:jte))
+   allocate (percen_bc_hphi(its:ite, kts:kte, jts:jte))
+   allocate (qnhphoa_curr(its:ite, kts:kte, jts:jte, N_HPHO_AEROSOLS))
+   Loop_j: do j = jts, jte
+     Loop_k: do k = kts, kte
+         Loop_i: do i = its, ite
+             ! Water friendly
+           percen_seas1(i, k, j) = chem(i, k, j, p_seas_1) * MICROG2KG * MASS2NUMBER_SEASALT(2)
+           percen_seas2(i, k, j) = chem(i, k, j, p_seas_2) * MICROG2KG * MASS2NUMBER_SEASALT(3)
+           percen_seas3(i, k, j) = chem(i, k, j, p_seas_3) * MICROG2KG * MASS2NUMBER_SEASALT(4)
+           percen_seas4(i, k, j) = chem(i, k, j, p_seas_4) * MICROG2KG * MASS2NUMBER_SEASALT(5)
+           percen_oc_hphi(i, k, j) = chem(i, k, j, p_oc2) * MICROG2KG * MASS2NUMBER_OC
+           percen_so4(i, k, j) = chem(i, k, j, p_sulf) * MICROG2KG * MASS2NUMBER_SO4
+           percen_bc_hphi(i, k, j) = chem(i, k, j, p_bc2) * MICROG2KG * MASS2NUMBER_BC
+           qnwfa_curr(i, k, j) = percen_seas1(i, k, j) + percen_seas2(i, k, j) + percen_seas3(i, k, j) + &
+                                 percen_seas4(i, k, j) + percen_oc_hphi(i, k, j) + percen_so4(i, k, j) + &
+                                 percen_bc_hphi(i, k, j)
+!           if (qnwfa_curr(i, k, j) < 11.1E6 .or. qnwfa_curr(i, k, j) > 9999.E6) then
+!            if (i == 20 .and. j == 20) then
+!             write (*, *) 'qnwfa, i, k, j =', qnwfa_curr(i, k, j), i, k, j
+!             write (*, *) 'percen_seas1(i, k, j) = ', percen_seas1(i, k, j)
+!             write (*, *) 'percen_seas2(i, k, j) = ', percen_seas2(i, k, j)
+!             write (*, *) 'percen_seas3(i, k, j) = ', percen_seas3(i, k, j)
+!             write (*, *) 'percen_seas4(i, k, j) = ', percen_seas4(i, k, j)
+!             write (*, *) 'percen_oc_hphi(i, k, j) = ', percen_oc_hphi(i, k, j)
+!             write (*, *) 'percen_so4(i, k, j) = ', percen_so4(i, k, j)
+!             write (*, *) 'percen_bc_hphi(i, k, j) = ', percen_bc_hphi(i, k, j)
+!           end if
+           percen_seas1(i, k, j) = percen_seas1(i, k, j) / qnwfa_curr(i, k, j)
+           percen_seas2(i, k, j) = percen_seas2(i, k, j) / qnwfa_curr(i, k, j)
+           percen_seas3(i, k, j) = percen_seas3(i, k, j) / qnwfa_curr(i, k, j)
+           percen_seas4(i, k, j) = percen_seas4(i, k, j) / qnwfa_curr(i, k, j)
+           percen_oc_hphi(i, k, j) = percen_oc_hphi(i, k, j) / qnwfa_curr(i, k, j)
+           percen_so4(i, k, j) = percen_so4(i, k, j) / qnwfa_curr(i, k, j)
+           percen_bc_hphi(i, k, j) = percen_bc_hphi(i, k, j) / qnwfa_curr(i, k, j)
+
+             ! Ice friendly
+           percen_dust1(i, k, j) = chem(i, k, j, p_dust_1) * MICROG2KG * MASS2NUMBER_DUST(1)
+           percen_dust2(i, k, j) = chem(i, k, j, p_dust_2) * MICROG2KG * MASS2NUMBER_DUST(2)
+           percen_dust3(i, k, j) = chem(i, k, j, p_dust_3) * MICROG2KG * MASS2NUMBER_DUST(3)
+           percen_dust4(i, k, j) = chem(i, k, j, p_dust_4) * MICROG2KG * MASS2NUMBER_DUST(4)
+           percen_dust5(i, k, j) = chem(i, k, j, p_dust_5) * MICROG2KG * MASS2NUMBER_DUST(5)
+           qnifa_curr(i, k, j) = percen_dust1(i, k, j) + percen_dust2(i, k, j) + percen_dust3(i, k, j) + &
+               percen_dust4(i, k, j) + percen_dust5(i, k, j)
+!           if (qnifa_curr(i, k, j) < naIN1*0.01 .or. qnifa_curr(i, k, j) > 9999.E6) then
+!            if (i == 20 .and. j == 20) then
+!             write (*, *) 'qnifa, i, k, j =', qnifa_curr(i, k, j), i, k, j
+!             write (*, *) 'percen_dust1(i, k, j) = ', percen_dust1(i, k, j)
+!             write (*, *) 'percen_dust2(i, k, j) = ', percen_dust2(i, k, j)
+!             write (*, *) 'percen_dust3(i, k, j) = ', percen_dust3(i, k, j)
+!             write (*, *) 'percen_dust4(i, k, j) = ', percen_dust4(i, k, j)
+!             write (*, *) 'percen_dust5(i, k, j) = ', percen_dust5(i, k, j)
+!           end if
+           percen_dust1(i, k, j) = percen_dust1(i, k, j) / qnifa_curr(i, k, j)
+           percen_dust2(i, k, j) = percen_dust2(i, k, j) / qnifa_curr(i, k, j)
+           percen_dust3(i, k, j) = percen_dust3(i, k, j) / qnifa_curr(i, k, j)
+           percen_dust4(i, k, j) = percen_dust4(i, k, j) / qnifa_curr(i, k, j)
+           percen_dust5(i, k, j) = percen_dust5(i, k, j) / qnifa_curr(i, k, j)
+
+             ! Hydrophobic aerosols
+           qnhphoa_curr(i, k, j, 1) = chem(i, k, j, p_oc1) * MICROG2KG * MASS2NUMBER_OC
+           qnhphoa_curr(i, k, j, 2) = chem(i, k, j, p_bc1) * MICROG2KG * MASS2NUMBER_BC
+
+         end do Loop_i
+      end do Loop_k
+   end do Loop_j
+#endif
+
+!                 if (PRESENT( QNC_CURR))
+                 CALL mp_gt_driver(                      &
+                     QV=qv_curr,                         &
+                     QC=qc_curr,                         &
+                     QR=qr_curr,                         &
+                     QI=qi_curr,                         &
+                     QS=qs_curr,                         &
+                     QG=qg_curr,                         &
+                     NI=qni_curr,                        &
+                     NR=qnr_curr,                        &
+                     NC=qnc_curr,                        &
+                     NWFA=qnwfa_curr,                    &
+                     NIFA=qnifa_curr,                    &
+                     nhphoa = qnhphoa_curr,              &
+                     TH=th,                              &
+                     PII=pi_phy,                         &
+                     P=p,                                &
+                     W=w,                                &
+                     DZ=dz8w,                            &
+                     DT_IN=dt,                           &
+                     ITIMESTEP=itimestep,                &
+                     RAINNC=RAINNC,                      &
+                     RAINNCV=RAINNCV,                    &
+                     SNOWNC=SNOWNC,                      &
+                     SNOWNCV=SNOWNCV,                    &
+                     GRAUPELNC=GRAUPELNC,                &
+                     GRAUPELNCV=GRAUPELNCV,              &
+                     SR=SR,                              &
+#if ( WRF_CHEM == 1 )
+                     RAINPROD=rainprod,                  &
+                     EVAPPROD=evapprod,                  &
+#endif
+                     REFL_10CM=refl_10cm,                &
+                     diagflag=diagflag,                  &
+                     ke_diag = ke_diag,                  &
+                     do_radar_ref=do_radar_ref,          &
+                     re_cloud=re_cloud,                  & ! G. Thompson
+                     re_ice=re_ice,                      & ! G. Thompson
+                     re_snow=re_snow,                    & ! G. Thompson
+                     has_reqc=has_reqc,                  & ! G. Thompson
+                     has_reqi=has_reqi,                  & ! G. Thompson
+                     has_reqs=has_reqs,                  & ! G. Thompson
+                 IDS=ids,IDE=ide, JDS=jds,JDE=jde, KDS=kds,KDE=kde, &
+                 IMS=ims,IME=ime, JMS=jms,JME=jme, KMS=kms,KME=kme, &
+                 ITS=its,ITE=ite, JTS=jts,JTE=jte, KTS=kts,KTE=kte)
+
+#if ( WRF_CHEM == 1 )
+   Loop_j2: do j = jts, jte
+     Loop_k2: do k = kts, kte
+       Loop_i2: do i = its, ite
+             ! Water friendly
+           if (qnwfa_curr(i, k, j) /= 11.1E6 .and. qnwfa_curr(i, k, j) /= 9999.E6) then
+             chem(i, k, j, p_seas_1) =  qnwfa_curr(i, k, j) * percen_seas1(i, k, j) / MASS2NUMBER_SEASALT(2) / MICROG2KG
+             chem(i, k, j, p_seas_2) =  qnwfa_curr(i, k, j) * percen_seas2(i, k, j) / MASS2NUMBER_SEASALT(3) / MICROG2KG
+             chem(i, k, j, p_seas_3) =  qnwfa_curr(i, k, j) * percen_seas3(i, k, j) / MASS2NUMBER_SEASALT(4) / MICROG2KG
+             chem(i, k, j, p_seas_4) =  qnwfa_curr(i, k, j) * percen_seas4(i, k, j) / MASS2NUMBER_SEASALT(5) / MICROG2KG
+             chem(i, k, j, p_oc2) =  qnwfa_curr(i, k, j) * percen_oc_hphi(i, k, j) / MASS2NUMBER_OC / MICROG2KG
+             chem(i, k, j, p_sulf) =  qnwfa_curr(i, k, j) * percen_so4(i, k, j) / MASS2NUMBER_SO4 / MICROG2KG
+             chem(i, k, j, p_bc2) =  qnwfa_curr(i, k, j) * percen_bc_hphi(i, k, j) / MASS2NUMBER_BC / MICROG2KG
+!           else
+!             CALL wrf_debug (0, 'QNWFA exceding a limit')
+!             write (*, *) 'qnwfa, i, k, j =', qnwfa_curr(i, k, j), i, k, j
+           end if
+
+             ! Ice friendly
+           if (qnifa_curr(i, k, j) /= naIN1*0.01 .and. qnifa_curr(i, k, j) /= 9999.E6) then
+             chem(i, k, j, p_dust_1) =  qnifa_curr(i, k, j) * percen_dust1(i, k, j) / MASS2NUMBER_DUST(1) / MICROG2KG
+             chem(i, k, j, p_dust_2) =  qnifa_curr(i, k, j) * percen_dust2(i, k, j) / MASS2NUMBER_DUST(2) / MICROG2KG
+             chem(i, k, j, p_dust_3) =  qnifa_curr(i, k, j) * percen_dust3(i, k, j) / MASS2NUMBER_DUST(3) / MICROG2KG
+             chem(i, k, j, p_dust_4) =  qnifa_curr(i, k, j) * percen_dust4(i, k, j) / MASS2NUMBER_DUST(4) / MICROG2KG
+             chem(i, k, j, p_dust_5) =  qnifa_curr(i, k, j) * percen_dust5(i, k, j) / MASS2NUMBER_DUST(5) / MICROG2KG
+!           else
+!             CALL wrf_debug (0, 'QNIFA exceding a limit')
+!             write (*, *) 'qnifa, i, k, j =', qnifa_curr(i, k, j), i, k, j
+           end if
+
+             ! Hydrophobic aerosol
+!           if (qnhphoa_curr(i, k, j) /= naIN1*0.01 .and. qnhphoa_curr(i, k, j) /= 9999.E6) then
+             chem(i, k, j, p_oc1) =  qnhphoa_curr(i, k, j, 1) / MASS2NUMBER_OC / MICROG2KG
+             chem(i, k, j, p_bc1) =  qnhphoa_curr(i, k, j, 2) / MASS2NUMBER_BC / MICROG2KG
+!           end if
+
+       end do Loop_i2
+     end do Loop_k2
+   end do Loop_j2
+
+   deallocate (percen_seas1)
+   deallocate (percen_seas2)
+   deallocate (percen_seas3)
+   deallocate (percen_seas4)
+   deallocate (percen_oc_hphi)
+   deallocate (percen_so4)
+   deallocate (percen_bc_hphi)
+   deallocate (percen_dust1)
+   deallocate (percen_dust2)
+   deallocate (percen_dust3)
+   deallocate (percen_dust4)
+   deallocate (percen_dust5)
+   deallocate (qnhphoa_curr)
+#endif
+
+               else
+                 CALL mp_gt_driver(                      &
                      QV=qv_curr,                         &
                      QC=qc_curr,                         &
                      QR=qr_curr,                         &
@@ -1109,6 +1307,9 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
                  IDS=ids,IDE=ide, JDS=jds,JDE=jde, KDS=kds,KDE=kde, &
                  IMS=ims,IME=ime, JMS=jms,JME=jme, KMS=kms,KME=kme, &
                  ITS=its,ITE=ite, JTS=jts,JTE=jte, KTS=kts,KTE=kte)
+
+               end if if_is_aerosol_aware_chem
+
              ELSE
                 CALL wrf_error_fatal ( 'arguments not present for calling thompson_et_al' )
              ENDIF

@@ -579,6 +579,20 @@ SUBROUTINE chem_so2( imx,jmx,lmx,&
 
            pso4_so2(i,j,l) = max(0.0D0,l1 + l2)
 
+! rkumar_debug_start
+           if(pso4_so2(i,j,l) .gt. 10000.) then
+             write(*,*)'i,j,l=', i,j,l
+             write(*,*)'imx,jmx,lmx=', imx,jmx,lmx
+             write(*,*)'l1,l2,pso4_so2=', l1,l2,pso4_so2
+             write(*,*)'so2,so2_cd,fc=', so2,so2_cd,fc
+             write(*,*)'so20, pso2_dms(i,j,l)=', so20, pso2_dms(i,j,l)
+             write(*,*)'rk1,rk2,rkt=', rk1,rk2,rkt
+             write(*,*)'tk,k0,m,kk,f1=',tk,k0,m,kk,f1
+             write(*,*)'oh(i,j,l),airden(i,j,l),h2o2(i,j,l),cldf=', oh(i,j,l),airden(i,j,l),h2o2(i,j,l),cldf(i,j,l)
+             stop
+           endif
+! rkumar_debug_end
+
            !    ---------------------------------------------------------------
            !    DIAGNOSTICS:      SO2 gas-phase loss       (kgS/timestep)  
            !                      SO2 aqueous-phase loss   (kgS/timestep) 

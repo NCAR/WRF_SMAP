@@ -95,6 +95,7 @@ CONTAINS
        else
           cldf(1,1,1)=0.
        endif
+       if (cldf(1,1,1) < 0.0 .or. cldf(1,1,1) > 1.0) cldf(1,1,1)=0.0
           if(p_qc.gt.1 .and. p_qi.gt.1)then
           if(moist(i,k,j,p_qc).gt.0.or.moist(i,k,j,p_qi).gt.0.)cldf(1,1,1)=1.
           elseif(p_qc.gt.1 .and. p_qi.le.1)then

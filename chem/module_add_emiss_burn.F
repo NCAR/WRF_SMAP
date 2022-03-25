@@ -217,8 +217,8 @@ CONTAINS
         conv_rho=r_q*4.828e-4/rho_phy(i,k,j)*dtstep/(dz8w(i,k,j)*60.)
         chem(i,k,j,p_so2)  =  chem(i,k,j,p_so2)                        &
                          +ebu(i,k,j,p_ebu_so2)*conv_rho
-        chem(i,k,j,p_sulf)  =  chem(i,k,j,p_sulf)                        &
-                         +ebu(i,k,j,p_ebu_sulf)*conv_rho
+!        chem(i,k,j,p_sulf)  =  chem(i,k,j,p_sulf)                        &
+!                         +ebu(i,k,j,p_ebu_sulf)*conv_rho
         chem(i,k,j,p_dms)  =  chem(i,k,j,p_dms)                        &
                          +ebu(i,k,j,p_ebu_dms)*conv_rho
         chem(i,k,j,p_oc1)  =  chem(i,k,j,p_oc1)                        &

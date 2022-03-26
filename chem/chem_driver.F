@@ -2021,6 +2021,12 @@ end if !Chemistry time step check
 !                write (*, *) 'xland(i,j), dms_0(i, j), i, j = ', xland(i, j), dms_0(i, j), i, j
 !                stop
 !              end if
+              if (dms_0(i, j) < 0.0 .or. dms_0(i, j) > 10.0) then
+                write (*, *) 'i, j = ', i, j
+                write (*, *) 'month_p, month_m, wm, wp = ', month_p, month_m, wm, wp
+                write (*, *) 'xland(i,j), dms_0(i, j), i, j = ', xland(i, j), dms_0(i, j), i, j
+                stop
+              end if
 
               do k = kts, kte
                 if (backg_no3(i, k, j) <= 0.0 .or. backg_oh(i, k, j) <= 0.0 .or. backg_h2o2(i, k, j) <= 0.0) then

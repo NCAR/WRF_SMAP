@@ -813,7 +813,7 @@
       ! Interpolate monthly background gas climatologies to current time
     if (config_flags%gasclim_opt == 1) call Update_backgound_gas_clims (grid%dms_0, grid%backg_no3, &
         grid%backg_oh, grid%backg_h2o2, grid%pingc, p_phy, grid%dms_mon, grid%no3_mon, grid%oh_mon, grid%h2o2_mon, &
-        month_p, month_m, wp, wm, &
+        grid%xland, month_p, month_m, wp, wm, &
         ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte,kts, kte)
 
 
@@ -1967,9 +1967,9 @@ end if !Chemistry time step check
 
           ! Extrapolation
         if (.not. is_inter_ok) then
-          if (vert_out(k_out) > vert_in(1)) then
+          if (vert_out(k_out) >= vert_in(1)) then
             return_value(k_out) = vals_in(1) * vert_out(k_out) / vert_in(1)
-          else if (vert_out(k_out) < vert_in(nz_in)) then
+          else if (vert_out(k_out) <= vert_in(nz_in)) then
             return_value(k_out) = vals_in(nz_in)
           end if
         end if
@@ -1978,7 +1978,7 @@ end if !Chemistry time step check
     end function Interp_vec_1d
 
       subroutine Update_backgound_gas_clims (dms_0, backg_no3, &
-        backg_oh, backg_h2o2, pingc, p_phy, dms_mon, no3_mon, oh_mon, h2o2_mon, &
+        backg_oh, backg_h2o2, pingc, p_phy, dms_mon, no3_mon, oh_mon, h2o2_mon, xland, &
         month_p, month_m, wp, wm, &
         ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte,kts, kte)
 
@@ -1991,17 +1991,19 @@ end if !Chemistry time step check
         real,  dimension(ims:ime, NLEV, jms:jme, NMONTH), intent(in) :: no3_mon, h2o2_mon, oh_mon
         real,  dimension(ims:ime, NLEV, jms:jme), intent(in) :: pingc
         real, dimension(ims:ime, kms:kme, jms:jme), intent(in) :: p_phy
+        real,  dimension(ims:ime, jms:jme), intent(in) :: xland
         real, intent (in) :: wp, wm
         integer, intent (in) :: month_p, month_m, ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte,kts, kte
 
         real, dimension(NLEV) :: pingc1d, clim1d
-        integer :: i, j
+        integer :: i, j, k
+        logical, parameter :: DEBUG_LOCAL = .true.
 
 
-        do j = jts, jte
-          do i = its, ite
+        Loop_j: do j = jts, jte
+          Loop_i: do i = its, ite
               ! dms
-            dms_0(i, j) = dms_mon(i, j, month_m) * wm + dms_mon (i, j, month_p) * wp
+            dms_0(i, j) = dms_mon(i, j, month_m) * wm + dms_mon(i, j, month_p) * wp
               ! no3
             pingc1d = pingc(i, :, j) * 100.0 ! Convert HPa to Pa
             clim1d = no3_mon(i, :, j, month_m) * wm + no3_mon(i, :, j, month_p) * wp
@@ -2012,8 +2014,38 @@ end if !Chemistry time step check
               ! h2o2
             clim1d = h2o2_mon(i, :, j, month_m) * wm + h2o2_mon(i, :, j, month_p) * wp
             backg_h2o2(i, kts:kte, j) = Interp_vec_1d (pingc1d, p_phy(i, kts:kte, j), clim1d)
-          end do
-        end do
+
+            If_debug: if (DEBUG_LOCAL) then
+                 ! This check fails because lakes have dms_0 = 0.0
+!              if ((xland(i, j) - 1.5 > 0.0) .and. dms_0(i, j) <= 0.0) then
+!                write (*, *) 'xland(i,j), dms_0(i, j), i, j = ', xland(i, j), dms_0(i, j), i, j
+!                stop
+!              end if
+
+              do k = kts, kte
+                if (backg_no3(i, k, j) <= 0.0 .or. backg_oh(i, k, j) <= 0.0 .or. backg_h2o2(i, k, j) <= 0.0) then
+                  write (*, *) 'i, k, j = ', i, k, j
+                  write (*, *) 'xland(i,j)', xland(i,j)
+                  write (*, *) 'month_p, month_m, wm, wp = ', month_p, month_m, wm, wp
+
+                  write (*, *) 'no3_mon(i, k, j, month_m), no3_mon(i, k, j, month_p) = ', no3_mon(i, k, j, month_m), no3_mon(i, k, j, month_p)
+                  write (*, *) 'backg_no3(i, k, j) = ', backg_no3(i, k, j)
+
+                  write (*, *) 'oh_mon(i, k, j, month_m), oh_mon(i, k, j, month_p) = ', oh_mon(i, k, j, month_m), oh_mon(i, k, j, month_p)
+                  write (*, *) 'backg_oh(i, k, j) = ', backg_oh(i, k, j)
+
+                  write (*, *) 'h2o2_mon(i, k, j, month_m), h2o2_mon(i, k, j, month_p) = ', h2o2_mon(i, k, j, month_m), h2o2_mon(i, k, j, month_p)
+                  write (*, *) 'backg_h2o2(i, k, j) = ', backg_h2o2(i, k, j)
+
+                  write (*, *) 'pingc1d = ', pingc1d
+                  write (*, *) 'p_phy(i, kts:kte, j) = ', p_phy(i, kts:kte, j)
+                  stop
+                end if
+              end do
+            end if If_debug
+
+          end do Loop_i
+        end do Loop_j
 
       end subroutine Update_backgound_gas_clims
 

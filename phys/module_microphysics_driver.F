@@ -761,7 +761,8 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
 
      ! paj
    real, dimension(:, :, :), allocatable :: percen_dust1, percen_dust2, percen_dust3, percen_dust4, percen_dust5, &
-       percen_seas1, percen_seas2, percen_seas3, percen_seas4, percen_oc, percen_so4
+       percen_seas1, percen_seas2, percen_seas3, percen_seas4, percen_oc_hphi, percen_oc_hpho, percen_so4, &
+       percen_bc_hphi, percen_bc_hpho
 
 !---------------------------------------------------------------------
 !  check for microphysics type.  We need a clean way to
@@ -1084,8 +1085,8 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
                if_is_aerosol_aware_chem: if (is_aerosol_aware_chem) then
 
 #if ( WRF_CHEM == 1 )
-! paj 
 ! Local arrays is OK for qnwfa and qnifa. But they are received as sate vars by mp_thompson module. 
+! So define local arrays in memory
    allocate (percen_dust1(its:ite, kts:kte, jts:jte))
    allocate (percen_dust2(its:ite, kts:kte, jts:jte))
    allocate (percen_dust3(its:ite, kts:kte, jts:jte))
@@ -1095,8 +1096,9 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
    allocate (percen_seas2(its:ite, kts:kte, jts:jte))
    allocate (percen_seas3(its:ite, kts:kte, jts:jte))
    allocate (percen_seas4(its:ite, kts:kte, jts:jte))
-   allocate (percen_oc(its:ite, kts:kte, jts:jte))
+   allocate (percen_oc_hphi(its:ite, kts:kte, jts:jte))
    allocate (percen_so4(its:ite, kts:kte, jts:jte))
+   allocate (percen_bc_hphi(its:ite, kts:kte, jts:jte))
    Loop_k: do k = kts, kte
       Loop_j: do j = jts, jte
          Loop_i: do i = its, ite
@@ -1105,10 +1107,12 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
            percen_seas2(i, k, j) = chem(i, k, j, p_seas_2) * MICROG2KG * MASS2NUMBER_SEASALT(3)
            percen_seas3(i, k, j) = chem(i, k, j, p_seas_3) * MICROG2KG * MASS2NUMBER_SEASALT(4)
            percen_seas4(i, k, j) = chem(i, k, j, p_seas_4) * MICROG2KG * MASS2NUMBER_SEASALT(5)
-           percen_oc(i, k, j) = chem(i, k, j, p_oc2) * MICROG2KG * MASS2NUMBER_OC
+           percen_oc_hphi(i, k, j) = chem(i, k, j, p_oc2) * MICROG2KG * MASS2NUMBER_OC
            percen_so4(i, k, j) = chem(i, k, j, p_sulf) * MICROG2KG * MASS2NUMBER_SO4
+           percen_bc_hphi(i, k, j) = chem(i, k, j, p_bc2) * MICROG2KG * MASS2NUMBER_BC
            qnwfa_curr(i, k, j) = percen_seas1(i, k, j) + percen_seas2(i, k, j) + percen_seas3(i, k, j) + &
-                                 percen_seas4(i, k, j) + percen_oc(i, k, j) + percen_so4(i, k, j)
+                                 percen_seas4(i, k, j) + percen_oc_hphi(i, k, j) + percen_so4(i, k, j) + &
+                                 percen_bc_hphi(i, k, j)
 !           if (qnwfa_curr(i, k, j) < 11.1E6 .or. qnwfa_curr(i, k, j) > 9999.E6) then
 !            if (i == 20 .and. j == 20) then
 !             write (*, *) 'qnwfa, i, k, j =', qnwfa_curr(i, k, j), i, k, j
@@ -1116,15 +1120,17 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
 !             write (*, *) 'percen_seas2(i, k, j) = ', percen_seas2(i, k, j)
 !             write (*, *) 'percen_seas3(i, k, j) = ', percen_seas3(i, k, j)
 !             write (*, *) 'percen_seas4(i, k, j) = ', percen_seas4(i, k, j)
-!             write (*, *) 'percen_oc(i, k, j) = ', percen_oc(i, k, j)
+!             write (*, *) 'percen_oc_hphi(i, k, j) = ', percen_oc_hphi(i, k, j)
 !             write (*, *) 'percen_so4(i, k, j) = ', percen_so4(i, k, j)
+!             write (*, *) 'percen_bc_hphi(i, k, j) = ', percen_bc_hphi(i, k, j)
 !           end if
            percen_seas1(i, k, j) = percen_seas1(i, k, j) / qnwfa_curr(i, k, j)
            percen_seas2(i, k, j) = percen_seas2(i, k, j) / qnwfa_curr(i, k, j)
            percen_seas3(i, k, j) = percen_seas3(i, k, j) / qnwfa_curr(i, k, j)
            percen_seas4(i, k, j) = percen_seas4(i, k, j) / qnwfa_curr(i, k, j)
-           percen_oc(i, k, j) = percen_oc(i, k, j) / qnwfa_curr(i, k, j)
+           percen_oc_hphi(i, k, j) = percen_oc_hphi(i, k, j) / qnwfa_curr(i, k, j)
            percen_so4(i, k, j) = percen_so4(i, k, j) / qnwfa_curr(i, k, j)
+           percen_bc_hphi(i, k, j) = percen_bc_hphi(i, k, j) / qnwfa_curr(i, k, j)
 
              ! Ice friendly
            percen_dust1(i, k, j) = chem(i, k, j, p_dust_1) * MICROG2KG * MASS2NUMBER_DUST(1)
@@ -1149,7 +1155,7 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
            percen_dust4(i, k, j) = percen_dust4(i, k, j) / qnifa_curr(i, k, j)
            percen_dust5(i, k, j) = percen_dust5(i, k, j) / qnifa_curr(i, k, j)
 
-             ! Preps for scavanging of OC1, BC1, BC2 goes here
+             ! Preps for scavanging of OC1, BC1 goes here
 
          end do Loop_i
       end do Loop_j
@@ -1202,7 +1208,6 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
                  ITS=its,ITE=ite, JTS=jts,JTE=jte, KTS=kts,KTE=kte)
 
 #if ( WRF_CHEM == 1 )
-     ! paj
    Loop_k2: do k = kts, kte
       Loop_j2: do j = jts, jte
          Loop_i2: do i = its, ite
@@ -1212,8 +1217,9 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
              chem(i, k, j, p_seas_2) =  qnwfa_curr(i, k, j) * percen_seas2(i, k, j) / MASS2NUMBER_SEASALT(3) / MICROG2KG
              chem(i, k, j, p_seas_3) =  qnwfa_curr(i, k, j) * percen_seas3(i, k, j) / MASS2NUMBER_SEASALT(4) / MICROG2KG
              chem(i, k, j, p_seas_4) =  qnwfa_curr(i, k, j) * percen_seas4(i, k, j) / MASS2NUMBER_SEASALT(5) / MICROG2KG
-             chem(i, k, j, p_oc2) =  qnwfa_curr(i, k, j) * percen_oc(i, k, j) / MASS2NUMBER_OC / MICROG2KG
+             chem(i, k, j, p_oc2) =  qnwfa_curr(i, k, j) * percen_oc_hphi(i, k, j) / MASS2NUMBER_OC / MICROG2KG
              chem(i, k, j, p_sulf) =  qnwfa_curr(i, k, j) * percen_so4(i, k, j) / MASS2NUMBER_SO4 / MICROG2KG
+             chem(i, k, j, p_bc2) =  qnwfa_curr(i, k, j) * percen_bc_hphi(i, k, j) / MASS2NUMBER_BC / MICROG2KG
 !           else
 !             CALL wrf_debug (0, 'QNWFA exceding a limit')
 !             write (*, *) 'qnwfa, i, k, j =', qnwfa_curr(i, k, j), i, k, j
@@ -1231,7 +1237,7 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
 !             write (*, *) 'qnifa, i, k, j =', qnifa_curr(i, k, j), i, k, j
            end if
 
-             ! Post for scavanging of OC1, BC1, BC2 goes here
+             ! Post for scavanging of OC1, BC1 goes here
          end do Loop_i2
       end do Loop_j2
    end do Loop_k2
@@ -1240,8 +1246,9 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
    deallocate (percen_seas2)
    deallocate (percen_seas3)
    deallocate (percen_seas4)
-   deallocate (percen_oc)
+   deallocate (percen_oc_hphi)
    deallocate (percen_so4)
+   deallocate (percen_bc_hphi)
    deallocate (percen_dust1)
    deallocate (percen_dust2)
    deallocate (percen_dust3)

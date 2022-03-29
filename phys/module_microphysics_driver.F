@@ -2,6 +2,14 @@
 ! *** add new modules of schemes here
 !
 MODULE module_microphysics_driver
+    real, parameter, dimension(5) :: MASS2NUMBER_DUST = (/2.4547e+14, 3.2831e+13, &
+                                     6.5168e+12, 9.8862e+11, 1.7595e+11/)
+    real, parameter, dimension(5) :: MASS2NUMBER_SEASALT = (/3.0174e+17, 1.0851e+16, &
+                                     1.2070e+14, 9.3908e+12, 2.9217e+11 /)
+    real, parameter :: MASS2NUMBER_SO4 = 9.0143e+16
+    real, parameter  :: MASS2NUMBER_OC = 9.7576e+17
+    real, parameter  :: MASS2NUMBER_BC = 1.5002e+19
+    real, parameter :: MICROG2KG = 1.0e-9
 CONTAINS
 
 SUBROUTINE microphysics_driver(                                          &
@@ -751,6 +759,10 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
    REAL :: constants_irrigation,tloc,irr_start,phase
    INTEGER, OPTIONAL, DIMENSION( ims:ime , jms:jme ), INTENT(INOUT) :: irr_rand_field
 
+     ! paj
+   real, dimension(:, :, :), allocatable :: percen_dust1, percen_dust2, percen_dust3, percen_dust4, percen_dust5, &
+       percen_seas1, percen_seas2, percen_seas3, percen_seas4, percen_oc, percen_so4
+
 !---------------------------------------------------------------------
 !  check for microphysics type.  We need a clean way to
 !  specify these things!
@@ -1071,11 +1083,78 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
 #endif
                if_is_aerosol_aware_chem: if (is_aerosol_aware_chem) then
 
-!#if ( WRF_CHEM == 1 )
-! paj: here goes the code to convert the gocart aerosols from mass to number and
-! to join them in the aerosol aware arrays qnwfa/qnifa do not need to
-! be sate variables. Local arrays is OK. NC has to be a state variable.
-!#endif
+#if ( WRF_CHEM == 1 )
+! paj 
+! Local arrays is OK for qnwfa and qnifa. But they are received as sate vars by mp_thompson module. 
+   allocate (percen_dust1(its:ite, kts:kte, jts:jte))
+   allocate (percen_dust2(its:ite, kts:kte, jts:jte))
+   allocate (percen_dust3(its:ite, kts:kte, jts:jte))
+   allocate (percen_dust4(its:ite, kts:kte, jts:jte))
+   allocate (percen_dust5(its:ite, kts:kte, jts:jte))
+   allocate (percen_seas1(its:ite, kts:kte, jts:jte))
+   allocate (percen_seas2(its:ite, kts:kte, jts:jte))
+   allocate (percen_seas3(its:ite, kts:kte, jts:jte))
+   allocate (percen_seas4(its:ite, kts:kte, jts:jte))
+   allocate (percen_oc(its:ite, kts:kte, jts:jte))
+   allocate (percen_so4(its:ite, kts:kte, jts:jte))
+   Loop_k: do k = kts, kte
+      Loop_j: do j = jts, jte
+         Loop_i: do i = its, ite
+             ! Water friendly
+           percen_seas1(i, k, j) = chem(i, k, j, p_seas_1) * MICROG2KG * MASS2NUMBER_SEASALT(2)
+           percen_seas2(i, k, j) = chem(i, k, j, p_seas_2) * MICROG2KG * MASS2NUMBER_SEASALT(3)
+           percen_seas3(i, k, j) = chem(i, k, j, p_seas_3) * MICROG2KG * MASS2NUMBER_SEASALT(4)
+           percen_seas4(i, k, j) = chem(i, k, j, p_seas_4) * MICROG2KG * MASS2NUMBER_SEASALT(5)
+           percen_oc(i, k, j) = chem(i, k, j, p_oc2) * MICROG2KG * MASS2NUMBER_OC
+           percen_so4(i, k, j) = chem(i, k, j, p_sulf) * MICROG2KG * MASS2NUMBER_SO4
+           qnwfa_curr(i, k, j) = percen_seas1(i, k, j) + percen_seas2(i, k, j) + percen_seas3(i, k, j) + &
+                                 percen_seas4(i, k, j) + percen_oc(i, k, j) + percen_so4(i, k, j)
+!           if (qnwfa_curr(i, k, j) < 11.1E6 .or. qnwfa_curr(i, k, j) > 9999.E6) then
+!            if (i == 20 .and. j == 20) then
+!             write (*, *) 'qnwfa, i, k, j =', qnwfa_curr(i, k, j), i, k, j
+!             write (*, *) 'percen_seas1(i, k, j) = ', percen_seas1(i, k, j)
+!             write (*, *) 'percen_seas2(i, k, j) = ', percen_seas2(i, k, j)
+!             write (*, *) 'percen_seas3(i, k, j) = ', percen_seas3(i, k, j)
+!             write (*, *) 'percen_seas4(i, k, j) = ', percen_seas4(i, k, j)
+!             write (*, *) 'percen_oc(i, k, j) = ', percen_oc(i, k, j)
+!             write (*, *) 'percen_so4(i, k, j) = ', percen_so4(i, k, j)
+!           end if
+           percen_seas1(i, k, j) = percen_seas1(i, k, j) / qnwfa_curr(i, k, j)
+           percen_seas2(i, k, j) = percen_seas2(i, k, j) / qnwfa_curr(i, k, j)
+           percen_seas3(i, k, j) = percen_seas3(i, k, j) / qnwfa_curr(i, k, j)
+           percen_seas4(i, k, j) = percen_seas4(i, k, j) / qnwfa_curr(i, k, j)
+           percen_oc(i, k, j) = percen_oc(i, k, j) / qnwfa_curr(i, k, j)
+           percen_so4(i, k, j) = percen_so4(i, k, j) / qnwfa_curr(i, k, j)
+
+             ! Ice friendly
+           percen_dust1(i, k, j) = chem(i, k, j, p_dust_1) * MICROG2KG * MASS2NUMBER_DUST(1)
+           percen_dust2(i, k, j) = chem(i, k, j, p_dust_2) * MICROG2KG * MASS2NUMBER_DUST(2)
+           percen_dust3(i, k, j) = chem(i, k, j, p_dust_3) * MICROG2KG * MASS2NUMBER_DUST(3)
+           percen_dust4(i, k, j) = chem(i, k, j, p_dust_4) * MICROG2KG * MASS2NUMBER_DUST(4)
+           percen_dust5(i, k, j) = chem(i, k, j, p_dust_5) * MICROG2KG * MASS2NUMBER_DUST(5)
+           qnifa_curr(i, k, j) = percen_dust1(i, k, j) + percen_dust2(i, k, j) + percen_dust3(i, k, j) + &
+               percen_dust4(i, k, j) + percen_dust5(i, k, j)
+!           if (qnifa_curr(i, k, j) < naIN1*0.01 .or. qnifa_curr(i, k, j) > 9999.E6) then
+!            if (i == 20 .and. j == 20) then
+!             write (*, *) 'qnifa, i, k, j =', qnifa_curr(i, k, j), i, k, j
+!             write (*, *) 'percen_dust1(i, k, j) = ', percen_dust1(i, k, j)
+!             write (*, *) 'percen_dust2(i, k, j) = ', percen_dust2(i, k, j)
+!             write (*, *) 'percen_dust3(i, k, j) = ', percen_dust3(i, k, j)
+!             write (*, *) 'percen_dust4(i, k, j) = ', percen_dust4(i, k, j)
+!             write (*, *) 'percen_dust5(i, k, j) = ', percen_dust5(i, k, j)
+!           end if
+           percen_dust1(i, k, j) = percen_dust1(i, k, j) / qnifa_curr(i, k, j)
+           percen_dust2(i, k, j) = percen_dust2(i, k, j) / qnifa_curr(i, k, j)
+           percen_dust3(i, k, j) = percen_dust3(i, k, j) / qnifa_curr(i, k, j)
+           percen_dust4(i, k, j) = percen_dust4(i, k, j) / qnifa_curr(i, k, j)
+           percen_dust5(i, k, j) = percen_dust5(i, k, j) / qnifa_curr(i, k, j)
+
+             ! Preps for scavanging of OC1, BC1, BC2 goes here
+
+         end do Loop_i
+      end do Loop_j
+   end do Loop_k
+#endif
 
 !                 if (PRESENT( QNC_CURR))
                  CALL mp_gt_driver(                      &
@@ -1087,9 +1166,9 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
                      QG=qg_curr,                         &
                      NI=qni_curr,                        &
                      NR=qnr_curr,                        &
-!                     NC=qnc_curr,                        &
-!                     NWFA=qnwfa_chem,                   &
-!                     NIFA=qnifa_chem,                   &
+                     NC=qnc_curr,                        &
+                     NWFA=qnwfa_curr,                    &
+                     NIFA=qnifa_curr,                    &
                      TH=th,                              &
                      PII=pi_phy,                         &
                      P=p,                                &
@@ -1122,10 +1201,53 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
                  IMS=ims,IME=ime, JMS=jms,JME=jme, KMS=kms,KME=kme, &
                  ITS=its,ITE=ite, JTS=jts,JTE=jte, KTS=kts,KTE=kte)
 
-!#if ( WRF_CHEM == 1 )
-! paj: here goes the code to convert qnwfa/qnifa from number to mass and put them in the GOCART
-!      arrays. The chem derived type
-!#endif
+#if ( WRF_CHEM == 1 )
+     ! paj
+   Loop_k2: do k = kts, kte
+      Loop_j2: do j = jts, jte
+         Loop_i2: do i = its, ite
+             ! Water friendly
+           if (qnwfa_curr(i, k, j) /= 11.1E6 .and. qnwfa_curr(i, k, j) /= 9999.E6) then
+             chem(i, k, j, p_seas_1) =  qnwfa_curr(i, k, j) * percen_seas1(i, k, j) / MASS2NUMBER_SEASALT(2) / MICROG2KG
+             chem(i, k, j, p_seas_2) =  qnwfa_curr(i, k, j) * percen_seas2(i, k, j) / MASS2NUMBER_SEASALT(3) / MICROG2KG
+             chem(i, k, j, p_seas_3) =  qnwfa_curr(i, k, j) * percen_seas3(i, k, j) / MASS2NUMBER_SEASALT(4) / MICROG2KG
+             chem(i, k, j, p_seas_4) =  qnwfa_curr(i, k, j) * percen_seas4(i, k, j) / MASS2NUMBER_SEASALT(5) / MICROG2KG
+             chem(i, k, j, p_oc2) =  qnwfa_curr(i, k, j) * percen_oc(i, k, j) / MASS2NUMBER_OC / MICROG2KG
+             chem(i, k, j, p_sulf) =  qnwfa_curr(i, k, j) * percen_so4(i, k, j) / MASS2NUMBER_SO4 / MICROG2KG
+!           else
+!             CALL wrf_debug (0, 'QNWFA exceding a limit')
+!             write (*, *) 'qnwfa, i, k, j =', qnwfa_curr(i, k, j), i, k, j
+           end if
+
+             ! Ice friendly
+           if (qnifa_curr(i, k, j) /= naIN1*0.01 .and. qnifa_curr(i, k, j) /= 9999.E6) then
+             chem(i, k, j, p_dust_1) =  qnifa_curr(i, k, j) * percen_dust1(i, k, j) / MASS2NUMBER_DUST(1) / MICROG2KG
+             chem(i, k, j, p_dust_2) =  qnifa_curr(i, k, j) * percen_dust2(i, k, j) / MASS2NUMBER_DUST(2) / MICROG2KG
+             chem(i, k, j, p_dust_3) =  qnifa_curr(i, k, j) * percen_dust3(i, k, j) / MASS2NUMBER_DUST(3) / MICROG2KG
+             chem(i, k, j, p_dust_4) =  qnifa_curr(i, k, j) * percen_dust4(i, k, j) / MASS2NUMBER_DUST(4) / MICROG2KG
+             chem(i, k, j, p_dust_5) =  qnifa_curr(i, k, j) * percen_dust5(i, k, j) / MASS2NUMBER_DUST(5) / MICROG2KG
+!           else
+!             CALL wrf_debug (0, 'QNIFA exceding a limit')
+!             write (*, *) 'qnifa, i, k, j =', qnifa_curr(i, k, j), i, k, j
+           end if
+
+             ! Post for scavanging of OC1, BC1, BC2 goes here
+         end do Loop_i2
+      end do Loop_j2
+   end do Loop_k2
+
+   deallocate (percen_seas1)
+   deallocate (percen_seas2)
+   deallocate (percen_seas3)
+   deallocate (percen_seas4)
+   deallocate (percen_oc)
+   deallocate (percen_so4)
+   deallocate (percen_dust1)
+   deallocate (percen_dust2)
+   deallocate (percen_dust3)
+   deallocate (percen_dust4)
+   deallocate (percen_dust5)
+#endif
 
                else
                  CALL mp_gt_driver(                      &

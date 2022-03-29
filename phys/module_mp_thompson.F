@@ -82,7 +82,7 @@
 !.. the input data.  Look inside the init routine for modifications
 !.. due to surface land-sea points or vegetation characteristics.
       REAL, PARAMETER, PRIVATE:: naIN0 = 1.5E6
-      REAL, PARAMETER, PRIVATE:: naIN1 = 0.5E6
+      REAL, PARAMETER, public :: naIN1 = 0.5E6
       REAL, PARAMETER, PRIVATE:: naCCN0 = 300.0E6
       REAL, PARAMETER, PRIVATE:: naCCN1 = 50.0E6
 

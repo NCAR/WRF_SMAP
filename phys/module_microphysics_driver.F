@@ -762,7 +762,7 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
      ! paj
    real, dimension(:, :, :), allocatable :: percen_dust1, percen_dust2, percen_dust3, percen_dust4, percen_dust5, &
        percen_seas1, percen_seas2, percen_seas3, percen_seas4, percen_oc_hphi, percen_oc_hpho, percen_so4, &
-       percen_bc_hphi, percen_bc_hpho
+       percen_bc_hphi, percen_bc_hpho, qnhphoa_curr
 
 !---------------------------------------------------------------------
 !  check for microphysics type.  We need a clean way to
@@ -1085,6 +1085,7 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
                if_is_aerosol_aware_chem: if (is_aerosol_aware_chem) then
 
 #if ( WRF_CHEM == 1 )
+! paj
 ! Local arrays is OK for qnwfa and qnifa. But they are received as sate vars by mp_thompson module. 
 ! So define local arrays in memory
    allocate (percen_dust1(its:ite, kts:kte, jts:jte))
@@ -1097,10 +1098,13 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
    allocate (percen_seas3(its:ite, kts:kte, jts:jte))
    allocate (percen_seas4(its:ite, kts:kte, jts:jte))
    allocate (percen_oc_hphi(its:ite, kts:kte, jts:jte))
+   allocate (percen_oc_hpho(its:ite, kts:kte, jts:jte))
    allocate (percen_so4(its:ite, kts:kte, jts:jte))
    allocate (percen_bc_hphi(its:ite, kts:kte, jts:jte))
-   Loop_k: do k = kts, kte
-      Loop_j: do j = jts, jte
+   allocate (percen_bc_hpho(its:ite, kts:kte, jts:jte))
+   allocate (qnhphoa_curr(its:ite, kts:kte, jts:jte))
+   Loop_j: do j = jts, jte
+     Loop_k: do k = kts, kte
          Loop_i: do i = its, ite
              ! Water friendly
            percen_seas1(i, k, j) = chem(i, k, j, p_seas_1) * MICROG2KG * MASS2NUMBER_SEASALT(2)
@@ -1155,11 +1159,16 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
            percen_dust4(i, k, j) = percen_dust4(i, k, j) / qnifa_curr(i, k, j)
            percen_dust5(i, k, j) = percen_dust5(i, k, j) / qnifa_curr(i, k, j)
 
-             ! Preps for scavanging of OC1, BC1 goes here
+             ! Hydrophobic aerosols
+           percen_oc_hpho(i, k, j) = chem(i, k, j, p_oc1) * MICROG2KG * MASS2NUMBER_OC
+           percen_bc_hpho(i, k, j) = chem(i, k, j, p_bc1) * MICROG2KG * MASS2NUMBER_BC
+           qnhphoa_curr(i, k, j) = percen_oc_hpho(i, k, j) + percen_bc_hpho(i, k, j)
+           percen_oc_hpho(i, k, j) = percen_oc_hpho(i, k, j) / qnhphoa_curr(i, k, j)
+           percen_bc_hpho(i, k, j) = percen_bc_hpho(i, k, j) / qnhphoa_curr(i, k, j)
 
          end do Loop_i
-      end do Loop_j
-   end do Loop_k
+      end do Loop_k
+   end do Loop_j
 #endif
 
 !                 if (PRESENT( QNC_CURR))
@@ -1237,7 +1246,12 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
 !             write (*, *) 'qnifa, i, k, j =', qnifa_curr(i, k, j), i, k, j
            end if
 
-             ! Post for scavanging of OC1, BC1 goes here
+             ! Hydrophobic aerosol
+!           if (qnhphoa_curr(i, k, j) /= naIN1*0.01 .and. qnhphoa_curr(i, k, j) /= 9999.E6) then
+             chem(i, k, j, p_oc1) =  qnhphoa_curr(i, k, j) * percen_oc_hpho(i, k, j) / MASS2NUMBER_OC / MICROG2KG
+             chem(i, k, j, p_bc1) =  qnhphoa_curr(i, k, j) * percen_bc_hpho(i, k, j) / MASS2NUMBER_BC / MICROG2KG
+!           end if
+
          end do Loop_i2
       end do Loop_j2
    end do Loop_k2
@@ -1247,13 +1261,16 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
    deallocate (percen_seas3)
    deallocate (percen_seas4)
    deallocate (percen_oc_hphi)
+   deallocate (percen_oc_hpho)
    deallocate (percen_so4)
    deallocate (percen_bc_hphi)
+   deallocate (percen_bc_hpho)
    deallocate (percen_dust1)
    deallocate (percen_dust2)
    deallocate (percen_dust3)
    deallocate (percen_dust4)
    deallocate (percen_dust5)
+   deallocate (qnhphoa_curr)
 #endif
 
                else

@@ -982,7 +982,7 @@
 !..This is a wrapper routine designed to transfer values from 3D to 1D.
 !+---+-----------------------------------------------------------------+
       SUBROUTINE mp_gt_driver(qv, qc, qr, qi, qs, qg, ni, nr, nc,       &
-                              nwfa, nifa, nwfa2d, nifa2d,               &
+                              nwfa, nifa, nhphoa, nwfa2d, nifa2d,       &
                               th, pii, p, w, dz, dt_in, itimestep,      &
                               RAINNC, RAINNCV, &
                               SNOWNC, SNOWNCV, &
@@ -1007,6 +1007,7 @@
                           qv, qc, qr, qi, qs, qg, ni, nr, th
       REAL, DIMENSION(ims:ime, kms:kme, jms:jme), OPTIONAL, INTENT(INOUT):: &
                           nc, nwfa, nifa
+      REAL, DIMENSION(its:ite, kts:kte, jts:jte), OPTIONAL, INTENT(INOUT):: nhphoa
       REAL, DIMENSION(ims:ime, jms:jme), OPTIONAL, INTENT(IN):: nwfa2d, nifa2d
       REAL, DIMENSION(ims:ime, kms:kme, jms:jme), INTENT(INOUT):: &
                           re_cloud, re_ice, re_snow
@@ -1030,6 +1031,7 @@
       REAL, DIMENSION(kts:kte):: &
                           qv1d, qc1d, qi1d, qr1d, qs1d, qg1d, ni1d,     &
                           nr1d, nc1d, nwfa1d, nifa1d,                   &
+                          nhphoa1d, &
                           t1d, p1d, w1d, dz1d, rho, dBZ
       REAL, DIMENSION(kts:kte):: re_qc1d, re_qi1d, re_qs1d
 #if ( WRF_CHEM == 1 )
@@ -1106,6 +1108,11 @@
          write(mp_debug,*) 'WARNING, nc-nwfa-nifa-nwfa2d present but is_aerosol_aware is FALSE'
          CALL wrf_debug(0, mp_debug)
       endif
+      if (is_aerosol_aware_chem .and. (.not. present(nwfa)) .and. &
+                                      (.not. present(nifa)) .and. &
+                                      (.not. present(nc)) .and. &
+                                      (.not. present(nhphoa)) )   &
+          call wrf_error_fatal ("is_aerosol_aware_chem requires optional arrays nc, nwfa, nifa, nhphoa.")
 
       j_loop:  do j = j_start, j_end
       i_loop:  do i = i_start, i_end
@@ -1145,17 +1152,27 @@
                nifa1d(k) = nifa(i,k,j)
             enddo
 !            nwfa1 = nwfa2d(i,j)
+            if (is_aerosol_aware_chem) then
+              do k = kts, kte
+                nhphoa1d(k) = nhphoa(i, k, j)
+              enddo
+            else
+              do k = kts, kte
+                nhphoa1d(k) = 0.0
+              enddo
+            end if
          else
             do k = kts, kte
                nc1d(k) = Nt_c/rho(k)
                nwfa1d(k) = 11.1E6/rho(k)
                nifa1d(k) = naIN1*0.01/rho(k)
+               nhphoa1d(k) = 0.0
             enddo
 !            nwfa1 = 11.1E6
          endif
 
          call mp_thompson(qv1d, qc1d, qi1d, qr1d, qs1d, qg1d, ni1d,     &
-                      nr1d, nc1d, nwfa1d, nifa1d, t1d, p1d, w1d, dz1d,  &
+                      nr1d, nc1d, nwfa1d, nifa1d, nhphoa1d, t1d, p1d, w1d, dz1d,  &
                       pptrain, pptsnow, pptgraul, pptice, &
 #if ( WRF_CHEM == 1 )
                       rainprod1d, evapprod1d, &
@@ -1200,6 +1217,7 @@
                nc(i,k,j) = nc1d(k)
                nwfa(i,k,j) = nwfa1d(k)
                nifa(i,k,j) = nifa1d(k)
+               nhphoa(i,k,j) = nhphoa1d(k)
             enddo
          end if
 
@@ -1366,7 +1384,7 @@
 !+---+-----------------------------------------------------------------+
 !
       subroutine mp_thompson (qv1d, qc1d, qi1d, qr1d, qs1d, qg1d, ni1d, &
-                          nr1d, nc1d, nwfa1d, nifa1d, t1d, p1d, w1d, dzq, &
+                          nr1d, nc1d, nwfa1d, nifa1d, nhphoa1d, t1d, p1d, w1d, dzq, &
                           pptrain, pptsnow, pptgraul, pptice, &
 #if ( WRF_CHEM == 1 )
                           rainprod, evapprod, &
@@ -1379,7 +1397,7 @@
       INTEGER, INTENT(IN):: kts, kte, ii, jj
       REAL, DIMENSION(kts:kte), INTENT(INOUT):: &
                           qv1d, qc1d, qi1d, qr1d, qs1d, qg1d, ni1d, &
-                          nr1d, nc1d, nwfa1d, nifa1d, t1d
+                          nr1d, nc1d, nwfa1d, nifa1d, t1d, nhphoa1d
       REAL, DIMENSION(kts:kte), INTENT(IN):: p1d, w1d, dzq
       REAL, INTENT(INOUT):: pptrain, pptsnow, pptgraul, pptice
       REAL, INTENT(IN):: dt
@@ -1390,7 +1408,7 @@
 
 !..Local variables
       REAL, DIMENSION(kts:kte):: tten, qvten, qcten, qiten, &
-           qrten, qsten, qgten, niten, nrten, ncten, nwfaten, nifaten
+           qrten, qsten, qgten, niten, nrten, ncten, nwfaten, nifaten, nhphoaten
 
       DOUBLE PRECISION, DIMENSION(kts:kte):: prw_vcd
 
@@ -1398,7 +1416,7 @@
            pnc_scw, pnc_gcw
 
       DOUBLE PRECISION, DIMENSION(kts:kte):: pna_rca, pna_sca, pna_gca, &
-           pnd_rcd, pnd_scd, pnd_gcd
+           pnd_rcd, pnd_scd, pnd_gcd, pnp_rcp, pnp_scp, pnp_gcp
 
       DOUBLE PRECISION, DIMENSION(kts:kte):: prr_wau, prr_rcw, prr_rcs, &
            prr_rcg, prr_sml, prr_gml, &
@@ -1424,7 +1442,7 @@
       DOUBLE PRECISION, PARAMETER:: zeroD0 = 0.0d0
 
       REAL, DIMENSION(kts:kte):: temp, pres, qv
-      REAL, DIMENSION(kts:kte):: rc, ri, rr, rs, rg, ni, nr, nc, nwfa, nifa
+      REAL, DIMENSION(kts:kte):: rc, ri, rr, rs, rg, ni, nr, nc, nwfa, nifa, nhphoa
       REAL, DIMENSION(kts:kte):: rho, rhof, rhof2
       REAL, DIMENSION(kts:kte):: qvs, qvsi, delQvs
       REAL, DIMENSION(kts:kte):: satw, sati, ssatw, ssati
@@ -1517,6 +1535,7 @@
          ncten(k) = 0.
          nwfaten(k) = 0.
          nifaten(k) = 0.
+         nhphoaten(k) = 0.0
 
          prw_vcd(k) = 0.
 
@@ -1585,6 +1604,10 @@
          pnd_rcd(k) = 0.
          pnd_scd(k) = 0.
          pnd_gcd(k) = 0.
+
+         pnp_rcp(k) = 0.
+         pnp_scp(k) = 0.
+         pnp_gcp(k) = 0.
       enddo
 #if ( WRF_CHEM == 1 )
       do k = kts, kte
@@ -1615,6 +1638,7 @@
          rho(k) = 0.622*pres(k)/(R*temp(k)*(qv(k)+0.622))
          nwfa(k) = MAX(11.1E6, MIN(9999.E6, nwfa1d(k)*rho(k)))
          nifa(k) = MAX(naIN1*0.01, MIN(9999.E6, nifa1d(k)*rho(k)))
+         nhphoa(k) = max (0.0, nhphoa1d(k) * rho(k))
 
          if (qc1d(k) .gt. R1) then
             no_micro = .false.
@@ -1953,6 +1977,12 @@
           pnd_rcd(k) = rhof(k)*t1_qr_qc*Ef_ra*nifa(k)*N0_r(k)           &
                          *((lamr+fv_r)**(-cre(9)))
           pnd_rcd(k) = MIN(DBLE(nifa(k)*odts), pnd_rcd(k))
+
+            ! PAJM: hydrophobic aerosol
+          Ef_ra = Eff_aero(mvd_r(k),0.0236E-6,visco(k),rho(k),temp(k),'r')
+          pnp_rcp(k) = rhof(k)*t1_qr_qc*Ef_ra*nhphoa(k)*N0_r(k)           &
+                         *((lamr+fv_r)**(-cre(9)))
+          pnp_rcp(k) = MIN(DBLE(nhphoa(k)*odts), pnp_rcp(k))
          endif
 
       enddo
@@ -2159,6 +2189,11 @@
           Ef_sa = Eff_aero(xDs,0.8E-6,visco(k),rho(k),temp(k),'s')
           pnd_scd(k) = rhof(k)*t1_qs_qc*Ef_sa*nifa(k)*smoe(k)
           pnd_scd(k) = MIN(DBLE(nifa(k)*odts), pnd_scd(k))
+
+            ! PAJM: hydrophobic aerosol
+          Ef_sa = Eff_aero(xDs,0.0236E-6,visco(k),rho(k),temp(k),'s')
+          pnp_scp(k) = rhof(k)*t1_qs_qc*Ef_sa*nhphoa(k)*smoe(k)
+          pnp_scp(k) = MIN(DBLE(nhphoa(k)*odts), pnp_scp(k))
          endif
          if (rg(k) .gt. r_g(1)) then
           xDg = (bm_g + mu_g + 1.) * ilamg(k)
@@ -2171,6 +2206,12 @@
           pnd_gcd(k) = rhof(k)*t1_qg_qc*Ef_ga*nifa(k)*N0_g(k)           &
                         *ilamg(k)**cge(9)
           pnd_gcd(k) = MIN(DBLE(nifa(k)*odts), pnd_gcd(k))
+
+            ! PAJM: hydrophobic aerosol
+          Ef_ga = Eff_aero(xDg,0.0236E-6,visco(k),rho(k),temp(k),'g')
+          pnp_gcp(k) = rhof(k)*t1_qg_qc*Ef_ga*nhphoa(k)*N0_g(k)           &
+                        *ilamg(k)**cge(9)
+          pnp_gcp(k) = MIN(DBLE(nhphoa(k)*odts), pnp_gcp(k))
          endif
 
 !..Rain collecting snow.  Cannot assume Wisner (1972) approximation
@@ -2619,6 +2660,8 @@
             else
                nifaten(k) = 0.
             endif
+            nhphoaten(k) = nhphoaten(k) - (pnp_rcp(k) + pnp_scp(k)          &
+                       + pnp_gcp(k)) * orho
          endif
 
 !..Water vapor tendency
@@ -3506,6 +3549,7 @@
                        (nwfa1d(k)+nwfaten(k)*DT)))
          nifa1d(k) = MAX(naIN1*0.01, MIN(9999.E6,                       &
                        (nifa1d(k)+nifaten(k)*DT)))
+         nhphoa1d(k) = MAX(0.0, nhphoa1d(k)+nhphoaten(k)*DT)
 
          if (qc1d(k) .le. R1) then
            qc1d(k) = 0.0

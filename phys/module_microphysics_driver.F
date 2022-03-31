@@ -1184,6 +1184,7 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
                      NC=qnc_curr,                        &
                      NWFA=qnwfa_curr,                    &
                      NIFA=qnifa_curr,                    &
+                     nhphoa = qnhphoa_curr,              &
                      TH=th,                              &
                      PII=pi_phy,                         &
                      P=p,                                &

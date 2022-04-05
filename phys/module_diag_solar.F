@@ -33,12 +33,18 @@ CONTAINS
              re_cloud, re_ice, re_snow, clrnidx, sza, cldfrac2d, wvp2d, lwp2d, iwp2d, swp2d, &
              wp2d_sum, lwp2d_tot, iwp2d_tot, wp2d_tot_sum, re_cloud_path, re_ice_path, re_snow_path, &
              re_cloud_path_tot, re_ice_path_tot, tau_qc, tau_qi, tau_qs, tau_qc_tot, tau_qi_tot, &
-             cbase, ctop, cbase_tot, ctop_tot, ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, &
+             cbase, ctop, cbase_tot, ctop_tot, chem, dust2d, ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, &
              kms, kme, ips, ipe, jps, jpe, kps, kpe, i_start, i_end, j_start, j_end, kts, kte, num_tiles)
 
 !----------------------------------------------------------------------
 
      USE module_model_constants, ONLY: G
+#if ( WRF_CHEM == 1 )
+     USE module_state_description, only : num_chem, p_dust_1, p_dust_2, p_dust_3, p_dust_4, p_dust_5
+#else
+     USE module_state_description, only : num_chem
+#endif
+
 
      IMPLICIT NONE
 
@@ -49,10 +55,11 @@ CONTAINS
      LOGICAL, INTENT(IN) :: f_qv, f_qc, f_qi, f_qs
      REAL, DIMENSION(ims:ime, jms:jme), INTENT(OUT) :: clrnidx, sza, cldfrac2d, wvp2d, lwp2d, iwp2d, swp2d, wp2d_sum, &
           lwp2d_tot, iwp2d_tot, wp2d_tot_sum, re_cloud_path, re_ice_path, re_snow_path, re_cloud_path_tot, re_ice_path_tot, &
-          tau_qc, tau_qi, tau_qs, tau_qc_tot, tau_qi_tot, cbase, ctop, cbase_tot, ctop_tot
+          tau_qc, tau_qi, tau_qs, tau_qc_tot, tau_qi_tot, cbase, ctop, cbase_tot, ctop_tot, dust2d
      INTEGER, INTENT(IN) :: ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, &
              ips, ipe, jps, jpe, kps, kpe, kts, kte, num_tiles
      INTEGER, DIMENSION(num_tiles), INTENT(IN) :: i_start, i_end, j_start, j_end
+     REAL, DIMENSION(ims:ime, kms:kme, jms:jme, num_chem), INTENT(IN) :: chem
  
      INTEGER :: i, j, k, its, ite, jts, jte, ij
      REAL    :: pmw, swp, iwp, lwp, q_aux, wc
@@ -76,6 +83,17 @@ CONTAINS
          jte = j_end(ij)
          DO j = jts, jte
            DO i = its, ite
+
+             dust2d(i, j) = 0.0
+#if ( WRF_CHEM == 1 )
+             do k = kts, kte - 1
+               dust2d(i, j) = dust2d(i, j) + chem(i, k, j, p_dust_1) * rho(i, k, j) * dz8w(i, k, j)
+               dust2d(i, j) = dust2d(i, j) + chem(i, k, j, p_dust_2) * rho(i, k, j) * dz8w(i, k, j)
+               dust2d(i, j) = dust2d(i, j) + chem(i, k, j, p_dust_3) * rho(i, k, j) * dz8w(i, k, j)
+               dust2d(i, j) = dust2d(i, j) + chem(i, k, j, p_dust_4) * rho(i, k, j) * dz8w(i, k, j)
+               dust2d(i, j) = dust2d(i, j) + chem(i, k, j, p_dust_5) * rho(i, k, j) * dz8w(i, k, j)
+             end do
+#endif
 
              !!! SOLAR ZENITH ANGLE
              sza(i, j) = DEGRAD * MAX( ACOS( coszen(i, j) ), 0.0 )

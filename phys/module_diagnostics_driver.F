@@ -1103,6 +1103,8 @@ CONTAINS
               cbase=grid%cbaseht, ctop=grid%ctopht,                         &
               cbase_tot=grid%cbaseht_tot, ctop_tot=grid%ctopht_tot,         &
               clrnidx=grid%clrnidx, sza=grid%sza,                           &
+              chem=chem,                                                    &
+              dust2d=grid%dust2d,                                           &
               ids=ids, ide=ide, jds=jds, jde=jde, kds=kds, kde=kde,         &
               ims=ims, ime=ime, jms=jms, jme=jme, kms=kms, kme=kme,         &
               ips=ips, ipe=ipe, jps=jps, jpe=jpe, kps=kps, kpe=kpe,         &

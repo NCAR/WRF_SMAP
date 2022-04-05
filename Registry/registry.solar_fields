@@ -9,6 +9,7 @@ state   real    qc_tot        ikj    dyn_em       1         -     -      "QC_TOT
 state   real    qi_tot        ikj    dyn_em       1         -     -      "QI_TOT"       "ICE MIXING RATIO RES + UNRES"                               "kg kg-1"
 
 #  2-D arrays that will be filled with diagnosed quantities
+state   real    dust2d        ij     dyn_em       1         -     h      "DUST2D"       "Column integrated dust concentration"                       "ug m-2"
 state   real    cldfrac2d     ij     dyn_em       1         -     h      "CLDFRAC2D"    "2-D MAX CLOUD FRACTION"                                     "%"
 state   real    wvp           ij     dyn_em       1         -     h      "WVP"          "WATER VAPOR PATH"                                           "kg m-2"
 state   real    lwp           ij     dyn_em       1         -     h      "LWP"          "LIQUID CLOUD WATER PATH"                                    "kg m-2"
@@ -65,4 +66,4 @@ state    real   ts_sza          ?!       misc       -         -     -      "TS_S
 #  Package declarations
 
 package   skip_solar_output     solar_diagnostics==0            -       -
-package     do_solar_output     solar_diagnostics==1            -       state:cldfrac2d,wvp,lwp,iwp,swp,wp_sum,lwp_tot,iwp_tot,wp_tot_sum,re_qc,re_qi,re_qs,re_qc_tot,re_qi_tot,tau_qc,tau_qi,tau_qs,tau_qc_tot,tau_qi_tot,cbaseht,ctopht,cbaseht_tot,ctopht_tot,clrnidx,sza
+package     do_solar_output     solar_diagnostics==1            -       state:cldfrac2d,wvp,lwp,iwp,swp,wp_sum,lwp_tot,iwp_tot,wp_tot_sum,re_qc,re_qi,re_qs,re_qc_tot,re_qi_tot,tau_qc,tau_qi,tau_qs,tau_qc_tot,tau_qi_tot,cbaseht,ctopht,cbaseht_tot,ctopht_tot,clrnidx,sza,dust2d

@@ -820,7 +820,8 @@ module_diag_trad_fields.o: \
 		../share/module_model_constants.o
 
 module_diag_solar.o: \
-                ../share/module_model_constants.o
+		../share/module_model_constants.o \
+		../frame/module_state_description.o
 
 module_diag_refl.o: \
 		../frame/module_dm.o			\

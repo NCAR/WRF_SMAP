@@ -1114,17 +1114,6 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
            qnwfa_curr(i, k, j) = percen_seas1(i, k, j) + percen_seas2(i, k, j) + percen_seas3(i, k, j) + &
                                  percen_seas4(i, k, j) + percen_oc_hphi(i, k, j) + percen_so4(i, k, j) + &
                                  percen_bc_hphi(i, k, j)
-!           if (qnwfa_curr(i, k, j) < 11.1E6 .or. qnwfa_curr(i, k, j) > 9999.E6) then
-!            if (i == 20 .and. j == 20) then
-!             write (*, *) 'qnwfa, i, k, j =', qnwfa_curr(i, k, j), i, k, j
-!             write (*, *) 'percen_seas1(i, k, j) = ', percen_seas1(i, k, j)
-!             write (*, *) 'percen_seas2(i, k, j) = ', percen_seas2(i, k, j)
-!             write (*, *) 'percen_seas3(i, k, j) = ', percen_seas3(i, k, j)
-!             write (*, *) 'percen_seas4(i, k, j) = ', percen_seas4(i, k, j)
-!             write (*, *) 'percen_oc_hphi(i, k, j) = ', percen_oc_hphi(i, k, j)
-!             write (*, *) 'percen_so4(i, k, j) = ', percen_so4(i, k, j)
-!             write (*, *) 'percen_bc_hphi(i, k, j) = ', percen_bc_hphi(i, k, j)
-!           end if
            percen_seas1(i, k, j) = percen_seas1(i, k, j) / qnwfa_curr(i, k, j)
            percen_seas2(i, k, j) = percen_seas2(i, k, j) / qnwfa_curr(i, k, j)
            percen_seas3(i, k, j) = percen_seas3(i, k, j) / qnwfa_curr(i, k, j)
@@ -1134,27 +1123,22 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
            percen_bc_hphi(i, k, j) = percen_bc_hphi(i, k, j) / qnwfa_curr(i, k, j)
 
              ! Ice friendly
-           percen_dust1(i, k, j) = chem(i, k, j, p_dust_1) * MICROG2KG * MASS2NUMBER_DUST(1)
-           percen_dust2(i, k, j) = chem(i, k, j, p_dust_2) * MICROG2KG * MASS2NUMBER_DUST(2)
-           percen_dust3(i, k, j) = chem(i, k, j, p_dust_3) * MICROG2KG * MASS2NUMBER_DUST(3)
-           percen_dust4(i, k, j) = chem(i, k, j, p_dust_4) * MICROG2KG * MASS2NUMBER_DUST(4)
-           percen_dust5(i, k, j) = chem(i, k, j, p_dust_5) * MICROG2KG * MASS2NUMBER_DUST(5)
-           qnifa_curr(i, k, j) = percen_dust1(i, k, j) + percen_dust2(i, k, j) + percen_dust3(i, k, j) + &
-               percen_dust4(i, k, j) + percen_dust5(i, k, j)
-!           if (qnifa_curr(i, k, j) < naIN1*0.01 .or. qnifa_curr(i, k, j) > 9999.E6) then
-!            if (i == 20 .and. j == 20) then
-!             write (*, *) 'qnifa, i, k, j =', qnifa_curr(i, k, j), i, k, j
-!             write (*, *) 'percen_dust1(i, k, j) = ', percen_dust1(i, k, j)
-!             write (*, *) 'percen_dust2(i, k, j) = ', percen_dust2(i, k, j)
-!             write (*, *) 'percen_dust3(i, k, j) = ', percen_dust3(i, k, j)
-!             write (*, *) 'percen_dust4(i, k, j) = ', percen_dust4(i, k, j)
-!             write (*, *) 'percen_dust5(i, k, j) = ', percen_dust5(i, k, j)
-!           end if
-           percen_dust1(i, k, j) = percen_dust1(i, k, j) / qnifa_curr(i, k, j)
-           percen_dust2(i, k, j) = percen_dust2(i, k, j) / qnifa_curr(i, k, j)
-           percen_dust3(i, k, j) = percen_dust3(i, k, j) / qnifa_curr(i, k, j)
-           percen_dust4(i, k, j) = percen_dust4(i, k, j) / qnifa_curr(i, k, j)
-           percen_dust5(i, k, j) = percen_dust5(i, k, j) / qnifa_curr(i, k, j)
+           if (config_flags%dust_opt == 0) then
+             qnifa_curr(i, k, j) = 0.0
+           else
+             percen_dust1(i, k, j) = chem(i, k, j, p_dust_1) * MICROG2KG * MASS2NUMBER_DUST(1)
+             percen_dust2(i, k, j) = chem(i, k, j, p_dust_2) * MICROG2KG * MASS2NUMBER_DUST(2)
+             percen_dust3(i, k, j) = chem(i, k, j, p_dust_3) * MICROG2KG * MASS2NUMBER_DUST(3)
+             percen_dust4(i, k, j) = chem(i, k, j, p_dust_4) * MICROG2KG * MASS2NUMBER_DUST(4)
+             percen_dust5(i, k, j) = chem(i, k, j, p_dust_5) * MICROG2KG * MASS2NUMBER_DUST(5)
+             qnifa_curr(i, k, j) = percen_dust1(i, k, j) + percen_dust2(i, k, j) + percen_dust3(i, k, j) + &
+                 percen_dust4(i, k, j) + percen_dust5(i, k, j)
+             percen_dust1(i, k, j) = percen_dust1(i, k, j) / qnifa_curr(i, k, j)
+             percen_dust2(i, k, j) = percen_dust2(i, k, j) / qnifa_curr(i, k, j)
+             percen_dust3(i, k, j) = percen_dust3(i, k, j) / qnifa_curr(i, k, j)
+             percen_dust4(i, k, j) = percen_dust4(i, k, j) / qnifa_curr(i, k, j)
+             percen_dust5(i, k, j) = percen_dust5(i, k, j) / qnifa_curr(i, k, j)
+           end if
 
              ! Hydrophobic aerosols
            qnhphoa_curr(i, k, j, 1) = chem(i, k, j, p_oc1) * MICROG2KG * MASS2NUMBER_OC
@@ -1224,28 +1208,20 @@ REAL, DIMENSION( ims:ime, kms:kme, jms:jme ),                        &
              chem(i, k, j, p_oc2) =  qnwfa_curr(i, k, j) * percen_oc_hphi(i, k, j) / MASS2NUMBER_OC / MICROG2KG
              chem(i, k, j, p_sulf) =  qnwfa_curr(i, k, j) * percen_so4(i, k, j) / MASS2NUMBER_SO4 / MICROG2KG
              chem(i, k, j, p_bc2) =  qnwfa_curr(i, k, j) * percen_bc_hphi(i, k, j) / MASS2NUMBER_BC / MICROG2KG
-!           else
-!             CALL wrf_debug (0, 'QNWFA exceding a limit')
-!             write (*, *) 'qnwfa, i, k, j =', qnwfa_curr(i, k, j), i, k, j
            end if
 
              ! Ice friendly
-           if (qnifa_curr(i, k, j) /= naIN1*0.01 .and. qnifa_curr(i, k, j) /= 9999.E6) then
+           if (qnifa_curr(i, k, j) /= naIN1*0.01 .and. qnifa_curr(i, k, j) /= 9999.E6 .and. config_flags%dust_opt /= 0) then
              chem(i, k, j, p_dust_1) =  qnifa_curr(i, k, j) * percen_dust1(i, k, j) / MASS2NUMBER_DUST(1) / MICROG2KG
              chem(i, k, j, p_dust_2) =  qnifa_curr(i, k, j) * percen_dust2(i, k, j) / MASS2NUMBER_DUST(2) / MICROG2KG
              chem(i, k, j, p_dust_3) =  qnifa_curr(i, k, j) * percen_dust3(i, k, j) / MASS2NUMBER_DUST(3) / MICROG2KG
              chem(i, k, j, p_dust_4) =  qnifa_curr(i, k, j) * percen_dust4(i, k, j) / MASS2NUMBER_DUST(4) / MICROG2KG
              chem(i, k, j, p_dust_5) =  qnifa_curr(i, k, j) * percen_dust5(i, k, j) / MASS2NUMBER_DUST(5) / MICROG2KG
-!           else
-!             CALL wrf_debug (0, 'QNIFA exceding a limit')
-!             write (*, *) 'qnifa, i, k, j =', qnifa_curr(i, k, j), i, k, j
            end if
 
              ! Hydrophobic aerosol
-!           if (qnhphoa_curr(i, k, j) /= naIN1*0.01 .and. qnhphoa_curr(i, k, j) /= 9999.E6) then
              chem(i, k, j, p_oc1) =  qnhphoa_curr(i, k, j, 1) / MASS2NUMBER_OC / MICROG2KG
              chem(i, k, j, p_bc1) =  qnhphoa_curr(i, k, j, 2) / MASS2NUMBER_BC / MICROG2KG
-!           end if
 
        end do Loop_i2
      end do Loop_k2

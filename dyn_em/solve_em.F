@@ -2516,6 +2516,8 @@ end if
                       k_start, k_end                                  )
              ENDIF
 
+             if ((ic == p_dust_1 .or. ic == p_dust_2 .or. ic == p_dust_3 .or. &
+                 ic == p_dust_4 .or. ic == p_dust_5) .and. config_flags%dust_opt == 0) goto 10
              CALL flow_dep_bdy_chem( chem(ims,kms,jms,ic),                          &
                                      chem_bxs(jms,kms,1,ic), chem_btxs(jms,kms,1,ic),  &
                                      chem_bxe(jms,kms,1,ic), chem_btxe(jms,kms,1,ic),  &
@@ -2535,6 +2537,7 @@ end if
                                      k_start, k_end,                     &
                                      grid%u_2,grid%v_2,grid%t_2,grid%znu,grid%msft, &
                                      grid%msfu,grid%msfv,grid%f,grid%mub,grid%dx,grid%xlat,grid%pv)
+ 10 continue
 
               ENDIF
          ENDDO chem_tile_loop_2

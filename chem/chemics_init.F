@@ -260,6 +260,16 @@ call wrf_message("**************************************************************
         CALL wrf_debug(15,'calling CB05_SORG_VBS_AQ_KPP chemistry from chem_driver')
    END SELECT chem_select
 
+     ! paj
+   if ( config_flags%dust_opt == 0 ) then
+     call wrf_message("WARNING: Zeroing dust bins!")
+     chem(:, :, :, p_dust_1) = 0.0
+     chem(:, :, :, p_dust_2) = 0.0
+     chem(:, :, :, p_dust_3) = 0.0
+     chem(:, :, :, p_dust_4) = 0.0
+     chem(:, :, :, p_dust_5) = 0.0
+   end if
+
    if ( config_flags%dust_opt == 1 ) then
        call wrf_message("WARNING: dust option 1 currently works only with the GOCART aerosol option.")
    endif

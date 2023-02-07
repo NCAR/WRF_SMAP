@@ -110,7 +110,7 @@ CONTAINS
 !
 !  volumetric soil moisture over porosity
 !
-     gwet(1,1)=smois(i,1,j)/porosity(isltyp(i,j))
+     gwet(1,1) = config_flags%dust_smtune * smois(i,1,j) / porosity(isltyp(i,j))
      ndt=ifix(dt)
      airden(1,1)=rho_phy(i,kts,j)
      dxy(1)=dx*dx

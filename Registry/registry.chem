@@ -3855,6 +3855,9 @@ rconfig   character   wes_seasonal_inname namelist,chem          max_domains    
 rconfig   integer        chemdiag        namelist,chem        max_domains        0      -     "Chemical tendency diagnostics"   ""    ""
 rconfig   integer        aero_srf_area_diag        namelist,chem        max_domains        0      -     "Aerosol srf area diagnostics"   ""    ""
 
+# Options for GOCART simple dust model (dust_opt = 1)
+rconfig   real        erocap          namelist,chem          1    1.0      rh    "erocap"    "GOCART simple dust max val erod"    ""
+
 # Options for AFWA GOCART Dust model (dust_opt=3)
 #
 # Tuning constants

@@ -104,9 +104,9 @@ CONTAINS
 ! don't trust the u10,v10 values, is model layers are very thin near surface
 !
      if(dz8w(i,kts,j).lt.12.)w10m=sqrt(u_phy(i,kts,j)*u_phy(i,kts,j)+v_phy(i,kts,j)*v_phy(i,kts,j))
-     erodin(1,1,1,1)=erod(i,j,1)!/dx/dx
-     erodin(1,1,2,1)=erod(i,j,2)!/dx/dx
-     erodin(1,1,3,1)=erod(i,j,3)!/dx/dx
+     erodin(1, 1, 1, 1) = min (erod(i, j, 1), config_flags%erocap) !/dx/dx
+     erodin(1, 1, 2, 1) = min (erod(i, j, 2), config_flags%erocap) !/dx/dx
+     erodin(1, 1, 3, 1) = min (erod(i, j, 3), config_flags%erocap) !/dx/dx
 !
 !  volumetric soil moisture over porosity
 !

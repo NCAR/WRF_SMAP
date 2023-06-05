@@ -718,6 +718,7 @@ CONTAINS
         call gocart_dust_driver(ktau,dtstep,config_flags,julday,alt,t_phy,moist,u_phy,  &
          v_phy,chem,rho_phy,dz8w,smois,u10,v10,p8w,erod,dustin,           &
          ivgtyp,isltyp,vegfra,xland,xlat,xlong,gsw,dx,g,emis_dust,        &
+         clayfrac, &
          ids,ide, jds,jde, kds,kde,                                        &
          ims,ime, jms,jme, kms,kme,                                        &
          its,ite, jts,jte, kts,kte                                         )

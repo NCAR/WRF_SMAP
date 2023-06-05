@@ -7,6 +7,7 @@ CONTAINS
   subroutine gocart_dust_driver(ktau,dt,config_flags,julday,alt,t_phy,moist,u_phy,  &
          v_phy,chem,rho_phy,dz8w,smois,u10,v10,p8w,erod,dustin,           &
          ivgtyp,isltyp,vegfra,xland,xlat,xlong,gsw,dx,g,emis_dust,        &
+         clayfrac, &
          ids,ide, jds,jde, kds,kde,                                        &
          ims,ime, jms,jme, kms,kme,                                        &
          its,ite, jts,jte, kts,kte                                         )
@@ -43,6 +44,7 @@ CONTAINS
                                                      v10,                  &
                                                      gsw,                  &
                                                   vegfra,                  &
+                                                  clayfrac, &
                                                      xland,                &
                                                      xlat,                 &
                                                      xlong
@@ -61,7 +63,8 @@ CONTAINS
   integer,dimension (1,1) :: ilwi
   real*8, DIMENSION (1,1,3,1) :: erodin
   real*8, DIMENSION (5) :: tc,bems
-  real*8, dimension (1,1) :: w10m,gwet,airden,airmas
+  real*8, dimension (1,1) :: w10m,gwet,airden,airmas, gravsm, drylimit
+  real*8 :: volsm
   real*8, dimension (1) :: dxy
   real*8  conver,converi
   real dttt
@@ -114,6 +117,13 @@ CONTAINS
      ndt=ifix(dt)
      airden(1,1)=rho_phy(i,kts,j)
      dxy(1)=dx*dx
+
+       ! Calculate gravimetric soil moisture.
+     volsm = max (smois(i, 1, j) * config_flags%dust_smtune, 0.0)
+     gravsm(1, 1) = 100.0 * volsm / ((1.0 - porosity(isltyp(i, j))) * &
+         (2.65 * (1.0 - clayfrac(i, j)) + 2.50 * clayfrac(i, j)))
+     drylimit(1, 1) = 14.0 * clayfrac(i,j) * clayfrac(i,j) + 17.0 * clayfrac(i,j)
+
 !    if(erod(i,j,1).gt.0.)write(0,*)'er1=',p_dust_1,num_chem,erod(i,j,1),tc(2)
 !    if(erod(i,j,1).gt.0.)write(0,*)'er1=',dt,dxy(1),u10(i,j),w10m(1,1)
 !    erodin(1,1,1,1)=  0.149748762553862
@@ -133,7 +143,8 @@ CONTAINS
 !    dttt=3600.
     call source_du( imx,jmx,lmx,nmx, dt, tc, &
                      erodin, ilwi, dxy, w10m, gwet, airden, airmas, &
-                     bems,config_flags%start_month,g)
+                     bems,config_flags%start_month,g, config_flags%sm_opt, config_flags%uts_opt, &
+                     gravsm, drylimit)
 !    write(0,*)tc(1)
 !    write(0,*)tc(2)
 !    write(0,*)tc(3)
@@ -165,7 +176,7 @@ end subroutine gocart_dust_driver
   
   SUBROUTINE source_du( imx,jmx,lmx,nmx, dt1, tc, &
                      erod, ilwi, dxy, w10m, gwet, airden, airmas, &
-                     bems,month,g0)
+                     bems,month,g0, sm_opt, uts_opt, gravsm, drylimit)
 
 ! ****************************************************************************
 ! *  Evaluate the source of each dust particles size classes  (kg/m3)        
@@ -198,7 +209,9 @@ end subroutine gocart_dust_driver
   REAL*8,    INTENT(IN)    :: erod(imx,jmx,ndcls,ndsrc)
   INTEGER, INTENT(IN)    :: ilwi(imx,jmx),month
 
-  REAL*8,    INTENT(IN)    :: w10m(imx,jmx), gwet(imx,jmx)
+  integer, intent (in) :: sm_opt, uts_opt
+
+  REAL*8,    INTENT(IN)    :: w10m(imx,jmx), gwet(imx,jmx), gravsm(imx,jmx), drylimit(imx,jmx)
   REAL*8,    INTENT(IN)    :: dxy(jmx)
   REAL*8,    INTENT(IN)    :: airden(imx,jmx,lmx), airmas(imx,jmx,lmx)
   REAL*8,    INTENT(INOUT) :: tc(imx,jmx,lmx,nmx)
@@ -270,20 +283,45 @@ end subroutine gocart_dust_driver
         DO i = 1,imx
            DO j = 1,jmx
               rhoa = airden(i,j,1)*1.0D-3
-              u_ts0 = 0.13*1.0D-2*SQRT(den(n)*g*diam(n)/rhoa)* &
-                   SQRT(1.0+0.006/den(n)/g/(diam(n))**2.5)/ &
-                   SQRT(1.928*(1331.0*(diam(n))**1.56+0.38)**0.092-1.0) 
+              select case (uts_opt)
+                case (0) ! MB95
+                  u_ts0 = 0.13*1.0D-2*SQRT(den(n)*g*diam(n)/rhoa)* &
+                       SQRT(1.0+0.006/den(n)/g/(diam(n))**2.5)/ &
+                       SQRT(1.928*(1331.0*(diam(n))**1.56+0.38)**0.092-1.0) 
+
+                case (1) ! Ginoux
+                  u_ts0 = 6.5 * sqrt ((den(n) - rhoa) / rhoa * g * diam(n)) * 1.e-2 ! [m s-1]
+
+                case default
+                  write (*, *) 'uts_opt option selected not supported'
+              end select
+
 !             write(0,*)u_ts0,den(n),diam(n),rhoa,g
               ! Fraction of emerged surfaces (subtract lakes, coastal ocean,..)
 !              cw = 1.0 - water(i,j)
               
-              ! Case of surface dry enough to erode
-              IF (gwet(i,j) < 0.5) THEN  
-                 u_ts = MAX(0.0D+0,u_ts0*(1.2D+0+2.0D-1*LOG10(MAX(1.0D-3, gwet(i,j)))))
-              ELSE
-                 ! Case of wet surface, no erosion
-                 u_ts = 100.0
-              END IF
+              select case (sm_opt)
+                case (0) ! Ginoux
+                  IF (gwet(i,j) < 0.5) THEN  
+                      ! Case of surface dry enough to erode
+                    u_ts = MAX(0.0D+0,u_ts0*(1.2D+0+2.0D-1*LOG10(MAX(1.0D-3, gwet(i,j)))))
+                  ELSE
+                     ! Case of wet surface, no erosion
+                   u_ts = 100.0
+                  END IF
+
+                case (1)
+                  IF (gravsm(i,j) > drylimit(i,j)) THEN
+                    u_ts = MAX(0.0D+0,u_ts0*(sqrt(1.0+1.21*(gravsm(i,j)-drylimit(i,j))**0.68)))
+                  ELSE
+                    u_ts = u_ts0
+                  END IF
+
+                case default
+                  write (*, *) 'sm_opt option selected not supported'
+                  stop
+              end select
+
               srce = frac_s(n)*erod(i,j,m,k)*dxy(j)  ! (m2)
               IF (ilwi(i,j) == 1 ) THEN
                  dsrc = ch_dust(n,month)*srce*w10m(i,j)**2 &
